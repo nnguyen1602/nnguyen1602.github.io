@@ -1,0 +1,43 @@
+---
+layout: post
+title: Setup Docker Registry with Self-signed Certificate
+link: setup-docker-registry
+category: documentations
+type: documentations
+---
+
+<p>On the documentation page of <a href="https://docs.docker.com/registry/deploying/">Deploy a registry server</a>, the
+    deploying process is shown. However, when we use our own self-signed certificate, docker seems to not trust it. So
+    following is the way to fix.</p>
+<ol>
+    <li>Generate self-signed certificate from <a href="{{site.documentations}}/generate-certificate">here</a></li>
+    <li><a href="https://docs.docker.com/registry/deploying/">Deploy a registry server</a>
+    <br>
+    <code>$ $ docker run -d \<br>
+            --restart=always \<br>
+            --name registry \<br>
+            -v "$(pwd)"/certs:/certs \<br>
+            -e REGISTRY_HTTP_ADDR=0.0.0.0:443 \<br>
+            -e REGISTRY_HTTP_TLS_CERTIFICATE=/certs/domain.crt \<br>
+            -e REGISTRY_HTTP_TLS_KEY=/certs/domain.key \<br>
+            -p 443:443 \<br>
+            registry</code>
+</li>
+<li>Add your CA like following:<br>
+    /etc/docker/certs.d/        <-- Certificate directory<br>
+    └── localhost:5000          <-- Hostname:port<br>
+       ├── client.cert          <-- Client certificate<br>
+       ├── client.key           <-- Client key<br>
+       └── ca.crt               <-- Certificate authority that signed<br>
+                                    the registry certificate</li><br>
+                                
+<li>If proxy is needed, create file: /etc/systemd/system/docker.service.d/https-proxy.conf
+    <br>
+    <code>
+        [Service]    <br>
+Environment="HTTP_PROXY=http://proxy.example.com:80/" "NO_PROXY=localhost,127.0.0.1,docker-registry.example.com,.corp" <br>
+[Service]    <br>
+Environment="HTTPS_PROXY=https://proxy.example.com:443/" "NO_PROXY=localhost,127.0.0.1,docker-registry.example.com,.corp"
+    </code>
+</li>
+</ol>

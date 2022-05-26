@@ -1,0 +1,40 @@
+---
+layout: post
+title: Using 'grep' to find a string in files
+link: find-string-trick
+category: documentations
+type: documentations
+---
+<p>
+    <strong>
+        The basic <code>grep</code> command syntax is as follows:
+    </strong>
+</p>
+
+<code>
+    grep 'word' filename <br/>
+    grep 'word' file1 file2 file3<br/>
+    grep 'string1 string2'  filename<br/>
+    cat otherfile | grep 'something'<br/>
+    command | grep 'something'<br/>
+    command option1 | grep 'data'<br/>
+    grep --color 'data' fileName
+</code>
+
+<p>
+    <strong>
+        Search a string in a file:
+    </strong>
+</p>
+<code>
+    grep string /path/to/file
+</code>
+
+<p>
+    <strong>
+        Search recursively in folders:
+    </strong>
+</p>
+<code>
+    grep -Ril "string" /path/to/search/place
+</code>

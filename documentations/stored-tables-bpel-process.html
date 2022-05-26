@@ -1,0 +1,1848 @@
+---
+layout: post
+title: Description of Dehydration Store Tables used in Oracle BPEL PM
+link: stored-tables-bpel-process
+category: documentations
+type: documentations
+---
+
+<div class='blog-posts hfeed'>
+
+    <div class="date-outer">
+        <div class="date-posts">
+            <div class='post-outer'>
+                <div class='post hentry uncustomized-post-template' itemprop='blogPost' itemscope='itemscope' itemtype='http://schema.org/BlogPosting'>
+                    <div class='post-body entry-content' id='post-body-348886887397452225' itemprop='description articleBody'>
+                        <div dir="ltr" style="text-align: left;" trbidi="on">
+                            <br />
+                            <div class="MsoNormal">
+                                <b>
+                                    <span style="font-family: Georgia, serif;">cube_instance</span>
+                                </b>
+                                <span style="font-family: Georgia, serif;">
+                                    - stores instance metadata, eg. instance creation date, current
+                                    <br /> state, title, process identifier
+                                    <br />
+                                    <br />
+                                    <b>cube_scope</b> - stores the scope data for an instance ... all the variables
+                                    <br /> declared in the bpel flow are stored here, as well as some internal objects to
+                                    <br /> help route logic throughout the flow.
+                                    <br />
+                                    <br />
+                                    <b>work_item</b> - stores activities created by an instance ... all BPEL activities in
+                                    <br /> a flow will have a work_item created for it. This work item row contains meta
+                                    <br /> data for the activity ... current state, label, expiration date (used by wait
+                                    <br /> activities) ... when the engine needs to be restarted and instances recovered,
+                                    <br /> pending flows are resumed by inspecting their unfinished work items.
+                                    <br />
+                                    <br />
+                                    <b>document </b>- stores large XML variables. If a variable gets to be larger than a
+                                    <br /> specific size (configurable via the largeDocumentThreshold property via the
+                                    <br /> domain configuration page) then the variable is stored in this table to
+                                    <br /> alleviate loading/saving time from the cube_scope table.
+                                    <br />
+                                    <br />
+                                    <br />
+                                    <b>audit_trail</b> - stores the audit trail for instances. The audit trail viewed
+                                    <br /> from the console is modelled from an XML document. As the instance is worked
+                                    <br /> on, each activity writes out events to the audit trail as XML which is compress
+                                    <br /> ed and stored in a raw column. Querying the audit trail via the API/console wil
+                                    <br /> l join the raw columns together and uncompress the contents into a single XML do
+                                    <br /> cument.
+                                    <br />
+                                    <br />
+                                    <b>audit_details</b> - audit details can be logged via the api ... by default
+                                    <br /> activities such as assign log the variables as audit details (this behavior can
+                                    <br /> be set via the auditLevel property on the domain configuration page). Details a
+                                    <br /> re separated from the audit trail because they tend to be very large in size ...
+                                    <br /> if the user wishes to view a detail they click a link from the audit trail page
+                                    <br /> and load the detail separately. There is a threshold value for details too ...
+                                    <br /> if the size of a detail is larger than a specific value (see auditDetailThreshol
+                                    <br /> d) then it is place in this table, otherwise it is merged into the audit trail r
+                                    <br /> ow.
+                                    <br />
+                                    <br />
+                                    <b>dlv_message</b> - callback messages are stored here. All non-invocation messages
+                                    <br /> are saved here upon receipt. The delivery layer will then attempt to correlate
+                                    <br /> the message with the receiving instance. This table only stores the metadata
+                                    <br /> for a message. (eg. current state, process identifier, receive date).
+                                    <br />
+                                    <br />
+                                    <b>dlv_message_bin</b> - stores the payload of a callback message. The metadata of a
+                                    <br /> callback message is kept in the dlv_message table, this table only stores the
+                                    <br /> payload as a blob. This separation allows the metadata to change frequently
+                                    <br /> without being impacted by the size of the payload (which is stored here and
+                                    <br /> never modified).
+                                    <br />
+                                    <br />
+                                    <b>dlv_subscription</b> - stores delivery subscriptions for an instance. Whenever an i
+                                    <br /> nstance expects a message from a partner (eg. receive, onMessage) a subscription
+                                    <br /> is written out for that specific receive activity. Once a delivery message is r
+                                    <br /> eceived the delivery layer attempts to correlate the message with the intended s
+                                    <br /> ubscription.
+                                    <br />
+                                    <br />
+                                    <b>invoke_message</b> - stores invocation messages, messages which will result in the
+                                    <br /> creation of a instance. This table only stores the metadata for an invocation
+                                    <br /> message (eg. current state, process identifier, receive date).
+                                    <br />
+                                    <br />
+                                    <b>invoke_message_bin</b> - stores the payload of an invocation message. Serves the
+                                    <br /> same purpose the dlv_message_bin table does for dlv_message.
+                                    <br />
+                                    <br />
+                                    <b>task</b> - stores tasks created for an instance. The TaskManager process keeps its
+                                    <br /> current state in this table. Upon calling invoking the TaskManager process, a
+                                    <br /> task object is created, with a title, assignee, status, expiration date, etc...
+                                    <br /> When updates are made to the TaskManager instance via the console the
+                                    <br /> underlying task object in the db is changed.
+                                    <br />
+                                    <br />
+                                    <b>schema_md</b> - (just added via patch delivered to Veerle) contains metadata about
+                                    <br /> columns defined in the orabpel schema. Use case driving this feature was how
+                                    <br /> to change the size of a custom_key column for a cube_instance row? Changing
+                                    <br /> the db schema was simple but the engine code assumed a certain length and
+                                    <br /> truncated values to match that length to avoid a db error being thrown. Now, co
+                                    <br /> lumn lengths are defined in this table instead of being specified in the code.
+                                    <br /> To change a column length, change the column definition in the table, then chang
+                                    <br /> e the value specified in this table, then restart the server.
+                                    <br />
+                                    <br />
+                                    <br />
+                                    <b>
+                                        <i>
+                                            <u>Column-by-column description:</u>
+                                        </i>
+                                    </b>
+                                    <br />
+                                    <br />
+                                    <b>table ci_id_range</b>
+                                    <br />
+                                    <br /> - next_range (integer) - instance ids in the system are allocated on a block
+                                    <br /> basis ... once all the ids from a block have been allocated, another block is
+                                    <br /> fetched, next_range specifies the start of the next block.
+                                    <br />
+                                    <br />
+                                    <br />
+                                    <b>table cube_instance</b>
+                                    <br />
+                                    <br /> - cikey (integer) - primary key ... foreign key for other tables
+                                    <br /> - domain_ref (smallint) - domain identifier is encoded as a integer to save
+                                    <br /> space, can be resolved by joining with domain.domain_ref.
+                                    <br /> - process_id (varchar) - process id
+                                    <br /> - revision_tag (varchar) - revision tag
+                                    <br /> - creation_date (date)
+                                    <br /> - creator (varchar) - user who created instance ... currently not used
+                                    <br /> - modify_date (date) - date instance was last modified
+                                    <br /> - modifier (varchar) - user who last modified instance ... currently not used
+                                    <br /> - state (integer) - current state of instance, see com.oracle.bpel.client.
+                                    <br /> IInstanceConstants for values
+                                    <br /> - priority (integer) - current instance priority (user specified, has no impact
+                                    <br /> on engine)
+                                    <br /> - title (varchar) - current instance title (user specified, no engine impact)
+                                    <br /> - status (varchar) - current status (user specified)
+                                    <br /> - stage (varchar) - current stage (user specified)
+                                    <br /> - conversation_id (varchar) - extra identifier associated with instance, eg. if
+                                    <br /> passed in via WS-Addressing or user specified custom key.
+                                    <br /> - root_id (varchar) - the conversation id of the instance at the top of the
+                                    <br /> invocation tree. Suppose A -&gt; B -&gt; C, root( B ) = A, root( C ) = A, parent( B
+                                    )
+                                    <br /> = A, parent( C ) = B. This instance, instance at the top of the tree will not
+                                    <br /> have this set.
+                                    <br /> - parent_id (varchar) - the conversation id of the parent instance that created
+                                    <br /> this instance, instance at the top of the tree will not have this set.
+                                    <br /> - scope_revision (integer) - internal checksum of scope bytes ... used to keep
+                                    <br /> caches in sync
+                                    <br /> - scope_csize (integer) - compressed size of instance scope in bytes
+                                    <br /> - scope_usize (integer) - uncompressed size of instance scope in bytes
+                                    <br /> - process_guid (varchar) - unique identifier for the process this instance be
+                                    <br /> longs to ... if changes need to be made for all instances of a process, this col
+                                    <br /> umn is used to query (eg. stale process).
+                                    <br /> - process_type (integer) - internal
+                                    <br /> - metadata (varchar) - user specified
+                                    <br />
+                                    <br />
+                                    <br />
+                                    <b>table cube_scope</b>
+                                    <br />
+                                    <br /> - cikey (integer) - foreign key
+                                    <br /> - domain_ref (integer) - domain identifier
+                                    <br /> - modify_date (date) - date scope last modified
+                                    <br /> - scope_bin (blob) - scope bytes
+                                    <br />
+                                    <br />
+                                    <br />
+                                    <b>table work_item</b>
+                                    <br />
+                                    <br /> - cikey (integer) - foreign key
+                                    <br /> - node_id (varchar) - part of work item composite key, identifier for bpel
+                                    <br /> activity that this work item created for
+                                    <br /> - scope_id (varchar) - part of work item composite key, identifier for internal
+                                    <br /> scope that this work item created for (note this is not the scope declared in
+                                    <br /> bpel, the engine has an internal scope tree that it creates for each instance,
+                                    <br /> bpel scopes will map to an internal scope but there will be other internal
+                                    <br /> scopes that have no mapping to the bpel definition).
+                                    <br /> - count_id (integer) - part of work item composite key, used to distinguish
+                                    <br /> between work items created from same activity in the same scope.
+                                    <br /> - domain_ref (integer) - domain identifier
+                                    <br /> - creation_date (date)
+                                    <br /> - creator (varchar) - user who created work item ... currently not used
+                                    <br /> - modify_date (date) - date work item was last modified
+                                    <br /> - modifier (varchar) - user who last modified work item ... currently not used
+                                    <br /> - state (integer) - current state of work item, see com.oracle.bpel.client.
+                                    <br /> IActivityConstants for values
+                                    <br /> - transition (integer) - internal use, used by engine for routing logic
+                                    <br /> - exception (integer) - no longer used
+                                    <br /> - exp_date (date) - expiration date for this work item; wait, onAlarm
+                                    <br /> activities are implemented as expiration timers.
+                                    <br /> - exp_flag (integer) - set if a work item has been called back by the
+                                    <br /> expiration agent (ie. expired).
+                                    <br /> - priority (integer) - priority of work item, user specified, no engine impact
+                                    <br /> - label (varchar) - current label (user specified, no engine impact)
+                                    <br /> - custom_id (varchar) - custom identifier (user specified, no engine impact)
+                                    <br /> - comments (varchar) - comment field (user specified, no engine impact)
+                                    <br /> - reference_id (varchar) -
+                                    <br /> - idempotent_flag (integer) - internal use
+                                    <br /> - process_guid (varchar) - unique identifier for the process this work item
+                                    <br /> belongs to ... if changes need to be made for all instances of a process, this
+                                    <br /> column is used to query (eg. stale process).
+                                    <br />
+                                    <br />
+                                    <br />
+                                    <b>table document</b>
+                                    <br />
+                                    <br /> - dockey (varchar) - primary key for document
+                                    <br /> - cikey (integer) - foreign key
+                                    <br /> - domain_ref (integer) - domain identifier
+                                    <br /> - classname (varchar) - no longer used
+                                    <br /> - bin_csize (integer) - compressed size of document in bytes
+                                    <br /> - bin_usize (integer) - uncompressed size of document in bytes
+                                    <br /> - bin (blob) - document bytes
+                                    <br /> - modify_date (date) - date document was last modified
+                                    <br />
+                                    <br />
+                                    <br />
+                                    <b>table audit_trail</b>
+                                    <br />
+                                    <br /> - cikey (integer) - foreign key
+                                    <br /> - domain_ref - domain identifier
+                                    <br /> - count_id (integer) - many audit trail entries may be made for each instance,
+                                    <br /> this column is incremented for each entry per instance.
+                                    <br /> - block (integer) - when the instance is dehydrated, the batched audit trail
+                                    <br /> entries up to that point are written out ... this block ties together all rows
+                                    <br /> written out at one time.
+                                    <br /> - block_csize (integer) - compressed size of block in bytes
+                                    <br /> - block_usize (integer) - uncompressed size of block in bytes
+                                    <br /> - log (raw) - block bytes
+                                    <br />
+                                    <br />
+                                    <br />
+                                    <b>table audit_details</b>
+                                    <br />
+                                    <br /> - cikey (integer) - foreign key
+                                    <br /> - domain_ref (integer) - domain identifier
+                                    <br /> - detail_id (integer) - part of composite key, means of identifying particular
+                                    <br /> detail from the audit trail
+                                    <br /> - bin_csize (integer) - compressed size of detail in bytes
+                                    <br /> - bin_usize (integer) - uncompressed size of detail in bytes
+                                    <br /> - bin (blob) - detail bytes
+                                    <br />
+                                    <br />
+                                    <b>
+                                        <br /> table dlv_message
+                                        <br />
+                                    </b>
+                                    <br /> - conv_id (varchar) - conversation id (correlation id) for the message...this
+                                    <br /> value is used to correlate the message to the subscription.
+                                    <br /> - conv_type (integer) - internal use
+                                    <br /> - message_guid (varchar) - unique identifier for the message...each message
+                                    <br /> received by the engine is tagged with a message guid.
+                                    <br /> - domain_ref (integer) - domain identifier
+                                    <br /> - process_id (varchar) - identifier for process to deliver the message to
+                                    <br /> - revision_tag (varchar) - identifier for process revision
+                                    <br /> - operation_name (varchar) - operation name for callback port.
+                                    <br /> - receive_date (date) - date message was received by engine
+                                    <br /> - state (integer) - current state of message ... see com.oracle.bpel.client.
+                                    <br /> IDeliveryConstants for values
+                                    <br /> - res_process_guid (varchar) - after the matching subscription is found, the
+                                    <br /> process guid for the subscription is written out here. - res_subscriber
+                                    <br /> (varchar) - identifier for matching subscription once found.
+                                    <br />
+                                    <br />
+                                    <br />
+                                    <b>table dlv_message_bin</b>
+                                    <br />
+                                    <br /> - message_guid (varchar) - unique identifier for message
+                                    <br /> - domain_ref (integer) - domain identifier
+                                    <br /> - bin_csize (integer) - compressed size of delivery message payload in bytes
+                                    <br /> - bin_usize (integer) - uncompressed size of delivery message payload in bytes
+                                    <br /> - bin (blob) - delivery message payload
+                                    <br />
+                                    <br />
+                                    <br />
+                                    <b>table dlv_subscription</b>
+                                    <br />
+                                    <br /> - conv_id (varchar) - conversation id for subscription, used to help correlate
+                                    <br /> received delivery messages.
+                                    <br /> - conv_type (integer) - internal use
+                                    <br /> - cikey (integer) - foreign key
+                                    <br /> - domain_ref (integer) - domain identifier
+                                    <br /> - process_id (varchar) - process identifier for instance
+                                    <br /> - revision_tag (varchar) - revision tag for process
+                                    <br /> - process_guid (varchar) - guid for process this subscription belongs to
+                                    <br /> - operation_name (varchar) - operation name for subscription (receive,
+                                    <br /> onMessage operation name).
+                                    <br /> - subscriber_id (varchar) - the work item composite key that this subscription
+                                    <br /> is positioned at (ie. the key for the receive, onMessage work item).
+                                    <br /> - service_name (varchar) - internal use
+                                    <br /> - subscription_date (date) - date subscription was created
+                                    <br /> - state (integer) - current state of subscription ... see com.oracle.bpel.
+                                    <br /> client.IDeliveryConstants for values
+                                    <br /> - properties (varchar) - additional property settings for subscription
+                                    <br />
+                                    <br />
+                                    <br />
+                                    <b>table invoke_message</b>
+                                    <br />
+                                    <br /> - conv_id (varchar) - conversation id for message, passed into system so
+                                    <br /> callbacks can correlate properly.
+                                    <br /> - message_guid (varchar) - unique identifier for message, generated when
+                                    <br /> invocation message is received by engine.
+                                    <br /> - domain_ref (integer) - domain identifier
+                                    <br /> - process_id (varchar) - identifier for process to deliver the message to
+                                    <br /> - revision_tag (varchar) - revision tag for process
+                                    <br /> - operation_name (varchar) - operation name for receive activity
+                                    <br /> - receive_date (date) - date invocation message was received by engine
+                                    <br /> - state - current state of invocation message, see com.oracle.bpel.client.
+                                    <br /> IDeliveryConstants for values
+                                    <br /> - priority (integer) - priority for invocation message, this value will be used
+                                    <br /> by the engine dispatching layer to rank messages according to importance ...
+                                    <br /> lower values mean higher priority ... messages with higher priority are dispatch
+                                    <br /> ed to threads faster than messages with lower values.
+                                    <br /> - properties (varchar) - additional property settings for message
+                                    <br />
+                                    <br />
+                                    <br />
+                                    <b>table invoke_message_bin</b>
+                                    <br />
+                                    <br /> - message_guid (varchar) - unique identifier for message
+                                    <br /> - domain_ref (integer) - domain identifier
+                                    <br /> - bin_csize (integer) - compressed size of invocation message payload in bytes
+                                    <br /> - bin_usize (integer) - uncompressed size of invocation message payload in bytes
+                                    <br /> - bin (blob) - invocation message bytes
+                                    <br />
+                                    <br />
+                                    <br />
+                                    <b>table task</b>
+                                    <br />
+                                    <br /> - domain_ref (integer) - domain identifier
+                                    <br /> - conversation_id (varchar) - conversation id for task instance ... allows task
+                                    <br /> instance to callback to client
+                                    <br /> - title (varchar) - current title for task, user specified
+                                    <br /> - creation_date (date) - date task was created
+                                    <br /> - creator (varchar) - user who created task
+                                    <br /> - modify_date (date) - date task was last modified
+                                    <br /> - modifier (varchar) - user who last modified task
+                                    <br /> - assignee (varchar) - current assignee of task, user specified, no engine
+                                    <br /> impact
+                                    <br /> - status (varchar) - current status, user specified, no engine impact
+                                    <br /> - expired (integer) - flag is set if task has expired
+                                    <br /> - exp_date (date) - expiration date for task, expiration actually takes place
+                                    <br /> on work item in TaskManaged instance, upon expiration task row is updated
+                                    <br /> - priority (integer) - current task priority, user specified, no engine impact
+                                    <br /> - template (varchar) - not used
+                                    <br /> - custom_key (varchar) - user specified custom key
+                                    <br /> - conclusion (varchar) - user specified conclusion, no engine impact
+                                    <o:p></o:p>
+                                </span>
+                            </div>
+                            <div class="MsoNormal">
+                                <br />
+                            </div>
+                            <div class="MsoNormal">
+                                <br />
+                            </div>
+                        </div>
+                        <div style='clear: both;'></div>
+                    </div>
+                    <div class='post-footer'>
+                        <div class='post-footer-line post-footer-line-1'>
+                            <span class='post-author vcard'>
+                            </span>
+                            <span class='post-timestamp'>
+                                at
+                                <meta content='http://ofmdeveloper.blogspot.com/2012/03/description-of-dehydration-store-tables.html' itemprop='url' />
+                                <a class='timestamp-link' href='http://ofmdeveloper.blogspot.com/2012/03/description-of-dehydration-store-tables.html' rel='bookmark'
+                                    title='permanent link'>
+                                    <abbr class='published' itemprop='datePublished' title='2012-03-27T14:28:00+05:30'>March 27, 2012</abbr>
+                                </a>
+                            </span>
+                            <span class='reaction-buttons'>
+                            </span>
+                            <span class='post-comment-link'>
+                                <a class='comment-link' href='http://ofmdeveloper.blogspot.com/2012/03/description-of-dehydration-store-tables.html#comment-form'
+                                    onclick=''>
+                                    No comments:
+                                </a>
+                            </span>
+                            <span class='post-backlinks post-comment-link'>
+                            </span>
+                            <span class='post-icons'>
+                                <span class='item-control blog-admin pid-448099788'>
+                                    <a href='https://www.blogger.com/post-edit.g?blogID=1664734121384799951&postID=348886887397452225&from=pencil' title='Edit Post'>
+                                        <img alt='' class='icon-action' height='18' src='https://resources.blogblog.com/img/icon18_edit_allbkg.gif' width='18' />
+                                    </a>
+                                </span>
+                            </span>
+                            
+                        <div class='post-footer-line post-footer-line-2'>
+                            <span class='post-labels'>
+                            </span>
+                        </div>
+                        <div class='post-footer-line post-footer-line-3'>
+                            <span class='post-location'>
+                            </span>
+                        </div>
+                    </div>
+                </div>
+            </div>
+            <div class='inline-ad'>
+                <!--Can't find substitution for tag [adCode]-->
+            </div>
+            <div class='post-outer'>
+                <div class='post hentry uncustomized-post-template' itemprop='blogPost' itemscope='itemscope' itemtype='http://schema.org/BlogPosting'>
+                    <meta content='1664734121384799951' itemprop='blogId' />
+                    <meta content='594960648653026210' itemprop='postId' />
+                    <a name='594960648653026210'></a>
+                    <h3 class='post-title entry-title' itemprop='name'>
+                        <a href='http://ofmdeveloper.blogspot.com/2012/03/list-of-dehydration-tables-in-oracle.html'>List of Dehydration tables in Oracle SOA 11G .</a>
+                    </h3>
+                    <div class='post-header'>
+                        <div class='post-header-line-1'></div>
+                    </div>
+                    <div class='post-body entry-content' id='post-body-594960648653026210' itemprop='description articleBody'>
+                        <div dir="ltr" style="text-align: left;" trbidi="on">
+                            <br />
+                            <table border="0" cellpadding="0" cellspacing="0" style="border-collapse: collapse; width: 341px;">
+                                <colgroup>
+                                    <col style="mso-width-alt: 10057; mso-width-source: userset; width: 206pt;" width="275"></col>
+                                    <col style="mso-width-alt: 2413; mso-width-source: userset; width: 50pt;" width="66"></col>
+                                </colgroup>
+                                <tbody>
+                                    <tr height="17" style="height: 12.75pt;">
+                                        <td class="xl63" height="17" style="height: 12.75pt; width: 206pt;" width="275">
+                                            <b>
+                                                <u>
+                                                    <i>TNAME</i>
+                                                </u>
+                                            </b>
+                                        </td>
+                                        <td class="xl63" style="border-left: none; width: 50pt;" width="66">
+                                            <b>
+                                                <i>
+                                                    <u>TABTYPE</u>
+                                                </i>
+                                            </b>
+                                        </td>
+                                    </tr>
+                                    <tr height="17" style="height: 12.75pt;">
+                                        <td class="xl65" height="17" style="border-top: none; height: 12.75pt;">XREF_DATA</td>
+                                        <td class="xl64" style="border-left: none; border-top: none;">TABLE</td>
+                                    </tr>
+                                    <tr height="17" style="height: 12.75pt;">
+                                        <td class="xl64" height="17" style="border-top: none; height: 12.75pt;">XREF_DELETED_DATA</td>
+                                        <td class="xl64" style="border-left: none; border-top: none;">TABLE</td>
+                                    </tr>
+                                    <tr height="17" style="height: 12.75pt;">
+                                        <td class="xl64" height="17" style="border-top: none; height: 12.75pt;">WLI_QS_REPORT_ATTRIBUTE</td>
+                                        <td class="xl64" style="border-left: none; border-top: none;">TABLE</td>
+                                    </tr>
+                                    <tr height="17" style="height: 12.75pt;">
+                                        <td class="xl64" height="17" style="border-top: none; height: 12.75pt;">WLI_QS_REPORT_DATA</td>
+                                        <td class="xl64" style="border-left: none; border-top: none;">TABLE</td>
+                                    </tr>
+                                    <tr height="17" style="height: 12.75pt;">
+                                        <td class="xl64" height="17" style="border-top: none; height: 12.75pt;">BPM_AUDIT_SEQUENCE</td>
+                                        <td class="xl64" style="border-left: none; border-top: none;">TABLE</td>
+                                    </tr>
+                                    <tr height="17" style="height: 12.75pt;">
+                                        <td class="xl64" height="17" style="border-top: none; height: 12.75pt;">BPM_AUDIT_QUERY_METADATA</td>
+                                        <td class="xl64" style="border-left: none; border-top: none;">TABLE</td>
+                                    </tr>
+                                    <tr height="17" style="height: 12.75pt;">
+                                        <td class="xl64" height="17" style="border-top: none; height: 12.75pt;">BPM_AUDIT_QUERY_VAR_MD</td>
+                                        <td class="xl64" style="border-left: none; border-top: none;">TABLE</td>
+                                    </tr>
+                                    <tr height="17" style="height: 12.75pt;">
+                                        <td class="xl64" height="17" style="border-top: none; height: 12.75pt;">BPM_AUDIT_QUERY</td>
+                                        <td class="xl64" style="border-left: none; border-top: none;">TABLE</td>
+                                    </tr>
+                                    <tr height="17" style="height: 12.75pt;">
+                                        <td class="xl64" height="17" style="border-top: none; height: 12.75pt;">BPM_AUDIT_QUERY_VARMD_EXT1</td>
+                                        <td class="xl64" style="border-left: none; border-top: none;">TABLE</td>
+                                    </tr>
+                                    <tr height="17" style="height: 12.75pt;">
+                                        <td class="xl64" height="17" style="border-top: none; height: 12.75pt;">BPM_AUDIT_QUERY_VARVALS_EXT1</td>
+                                        <td class="xl64" style="border-left: none; border-top: none;">TABLE</td>
+                                    </tr>
+                                    <tr height="17" style="height: 12.75pt;">
+                                        <td class="xl64" height="17" style="border-top: none; height: 12.75pt;">BPM_AUDIT_QUERY_VAR_RANGES</td>
+                                        <td class="xl64" style="border-left: none; border-top: none;">TABLE</td>
+                                    </tr>
+                                    <tr height="17" style="height: 12.75pt;">
+                                        <td class="xl64" height="17" style="border-top: none; height: 12.75pt;">BPM_CUBE_SEQUENCE</td>
+                                        <td class="xl64" style="border-left: none; border-top: none;">TABLE</td>
+                                    </tr>
+                                    <tr height="17" style="height: 12.75pt;">
+                                        <td class="xl64" height="17" style="border-top: none; height: 12.75pt;">BPM_CUBE_ORGUNIT</td>
+                                        <td class="xl64" style="border-left: none; border-top: none;">TABLE</td>
+                                    </tr>
+                                    <tr height="17" style="height: 12.75pt;">
+                                        <td class="xl64" height="17" style="border-top: none; height: 12.75pt;">BPM_CUBE_ORGUNIT_ASSOC</td>
+                                        <td class="xl64" style="border-left: none; border-top: none;">TABLE</td>
+                                    </tr>
+                                    <tr height="17" style="height: 12.75pt;">
+                                        <td class="xl64" height="17" style="border-top: none; height: 12.75pt;">BPM_CUBE_PROCESS</td>
+                                        <td class="xl64" style="border-left: none; border-top: none;">TABLE</td>
+                                    </tr>
+                                    <tr height="17" style="height: 12.75pt;">
+                                        <td class="xl64" height="17" style="border-top: none; height: 12.75pt;">BPM_CUBE_PROCESS_PARTNER</td>
+                                        <td class="xl64" style="border-left: none; border-top: none;">TABLE</td>
+                                    </tr>
+                                    <tr height="17" style="height: 12.75pt;">
+                                        <td class="xl64" height="17" style="border-top: none; height: 12.75pt;">BPM_CUBE_PARTNER_SERVICE</td>
+                                        <td class="xl64" style="border-left: none; border-top: none;">TABLE</td>
+                                    </tr>
+                                    <tr height="17" style="height: 12.75pt;">
+                                        <td class="xl64" height="17" style="border-top: none; height: 12.75pt;">BPM_CUBE_GLOBALCREATETASK</td>
+                                        <td class="xl64" style="border-left: none; border-top: none;">TABLE</td>
+                                    </tr>
+                                    <tr height="17" style="height: 12.75pt;">
+                                        <td class="xl64" height="17" style="border-top: none; height: 12.75pt;">BPM_CUBE_ACTIVITY</td>
+                                        <td class="xl64" style="border-left: none; border-top: none;">TABLE</td>
+                                    </tr>
+                                    <tr height="17" style="height: 12.75pt;">
+                                        <td class="xl64" height="17" style="border-top: none; height: 12.75pt;">BPM_CUBE_ACTIVITY_PROPERTY</td>
+                                        <td class="xl64" style="border-left: none; border-top: none;">TABLE</td>
+                                    </tr>
+                                    <tr height="17" style="height: 12.75pt;">
+                                        <td class="xl64" height="17" style="border-top: none; height: 12.75pt;">BPM_CUBE_ACTIVITY_SEQFLOW</td>
+                                        <td class="xl64" style="border-left: none; border-top: none;">TABLE</td>
+                                    </tr>
+                                    <tr height="17" style="height: 12.75pt;">
+                                        <td class="xl64" height="17" style="border-top: none; height: 12.75pt;">BPM_CUBE_LASTSNAPSHOT</td>
+                                        <td class="xl64" style="border-left: none; border-top: none;">TABLE</td>
+                                    </tr>
+                                    <tr height="17" style="height: 12.75pt;">
+                                        <td class="xl64" height="17" style="border-top: none; height: 12.75pt;">BPM_CUBE_ROLE</td>
+                                        <td class="xl64" style="border-left: none; border-top: none;">TABLE</td>
+                                    </tr>
+                                    <tr height="17" style="height: 12.75pt;">
+                                        <td class="xl64" height="17" style="border-top: none; height: 12.75pt;">IP_QTAB</td>
+                                        <td class="xl64" style="border-left: none; border-top: none;">TABLE</td>
+                                    </tr>
+                                    <tr height="17" style="height: 12.75pt;">
+                                        <td class="xl64" height="17" style="border-top: none; height: 12.75pt;">AQ$_IP_QTAB_S</td>
+                                        <td class="xl64" style="border-left: none; border-top: none;">TABLE</td>
+                                    </tr>
+                                    <tr height="17" style="height: 12.75pt;">
+                                        <td class="xl64" height="17" style="border-top: none; height: 12.75pt;">AQ$_IP_QTAB_T</td>
+                                        <td class="xl64" style="border-left: none; border-top: none;">TABLE</td>
+                                    </tr>
+                                    <tr height="17" style="height: 12.75pt;">
+                                        <td class="xl64" height="17" style="border-top: none; height: 12.75pt;">AQ$IP_QTAB_S</td>
+                                        <td class="xl64" style="border-left: none; border-top: none;">VIEW</td>
+                                    </tr>
+                                    <tr height="17" style="height: 12.75pt;">
+                                        <td class="xl64" height="17" style="border-top: none; height: 12.75pt;">AQ$_IP_QTAB_H</td>
+                                        <td class="xl64" style="border-left: none; border-top: none;">TABLE</td>
+                                    </tr>
+                                    <tr height="17" style="height: 12.75pt;">
+                                        <td class="xl64" height="17" style="border-top: none; height: 12.75pt;">SYS_IOT_OVER_89366</td>
+                                        <td class="xl64" style="border-left: none; border-top: none;">TABLE</td>
+                                    </tr>
+                                    <tr height="17" style="height: 12.75pt;">
+                                        <td class="xl64" height="17" style="border-top: none; height: 12.75pt;">AQ$_IP_QTAB_G</td>
+                                        <td class="xl64" style="border-left: none; border-top: none;">TABLE</td>
+                                    </tr>
+                                    <tr height="17" style="height: 12.75pt;">
+                                        <td class="xl64" height="17" style="border-top: none; height: 12.75pt;">AQ$_IP_QTAB_I</td>
+                                        <td class="xl64" style="border-left: none; border-top: none;">TABLE</td>
+                                    </tr>
+                                    <tr height="17" style="height: 12.75pt;">
+                                        <td class="xl64" height="17" style="border-top: none; height: 12.75pt;">AQ$_IP_QTAB_F</td>
+                                        <td class="xl64" style="border-left: none; border-top: none;">VIEW</td>
+                                    </tr>
+                                    <tr height="17" style="height: 12.75pt;">
+                                        <td class="xl64" height="17" style="border-top: none; height: 12.75pt;">AQ$IP_QTAB</td>
+                                        <td class="xl64" style="border-left: none; border-top: none;">VIEW</td>
+                                    </tr>
+                                    <tr height="17" style="height: 12.75pt;">
+                                        <td class="xl64" height="17" style="border-top: none; height: 12.75pt;">AQ$IP_QTAB_R</td>
+                                        <td class="xl64" style="border-left: none; border-top: none;">VIEW</td>
+                                    </tr>
+                                    <tr height="17" style="height: 12.75pt;">
+                                        <td class="xl64" height="17" style="border-top: none; height: 12.75pt;">EDN_LOG_MESSAGES</td>
+                                        <td class="xl64" style="border-left: none; border-top: none;">TABLE</td>
+                                    </tr>
+                                    <tr height="17" style="height: 12.75pt;">
+                                        <td class="xl64" height="17" style="border-top: none; height: 12.75pt;">EDN_LOG_ENABLED</td>
+                                        <td class="xl64" style="border-left: none; border-top: none;">TABLE</td>
+                                    </tr>
+                                    <tr height="17" style="height: 12.75pt;">
+                                        <td class="xl64" height="17" style="border-top: none; height: 12.75pt;">EDN_EVENT_AGENTS</td>
+                                        <td class="xl64" style="border-left: none; border-top: none;">TABLE</td>
+                                    </tr>
+                                    <tr height="17" style="height: 12.75pt;">
+                                        <td class="xl64" height="17" style="border-top: none; height: 12.75pt;">B2B_DATA_STORAGE</td>
+                                        <td class="xl64" style="border-left: none; border-top: none;">TABLE</td>
+                                    </tr>
+                                    <tr height="17" style="height: 12.75pt;">
+                                        <td class="xl64" height="17" style="border-top: none; height: 12.75pt;">B2B_WIRE_MESSAGE</td>
+                                        <td class="xl64" style="border-left: none; border-top: none;">TABLE</td>
+                                    </tr>
+                                    <tr height="17" style="height: 12.75pt;">
+                                        <td class="xl64" height="17" style="border-top: none; height: 12.75pt;">B2B_BUSINESS_MESSAGE</td>
+                                        <td class="xl64" style="border-left: none; border-top: none;">TABLE</td>
+                                    </tr>
+                                    <tr height="17" style="height: 12.75pt;">
+                                        <td class="xl64" height="17" style="border-top: none; height: 12.75pt;">B2B_EXT_BUSINESS_MESSAGE</td>
+                                        <td class="xl64" style="border-left: none; border-top: none;">TABLE</td>
+                                    </tr>
+                                    <tr height="17" style="height: 12.75pt;">
+                                        <td class="xl64" height="17" style="border-top: none; height: 12.75pt;">B2B_APP_MESSAGE</td>
+                                        <td class="xl64" style="border-left: none; border-top: none;">TABLE</td>
+                                    </tr>
+                                    <tr height="17" style="height: 12.75pt;">
+                                        <td class="xl64" height="17" style="border-top: none; height: 12.75pt;">B2B_CONTROL_NUMBER</td>
+                                        <td class="xl64" style="border-left: none; border-top: none;">TABLE</td>
+                                    </tr>
+                                    <tr height="17" style="height: 12.75pt;">
+                                        <td class="xl64" height="17" style="border-top: none; height: 12.75pt;">B2B_PENDING_MESSAGE</td>
+                                        <td class="xl64" style="border-left: none; border-top: none;">TABLE</td>
+                                    </tr>
+                                    <tr height="17" style="height: 12.75pt;">
+                                        <td class="xl64" height="17" style="border-top: none; height: 12.75pt;">B2B_BATCH_EVENT</td>
+                                        <td class="xl64" style="border-left: none; border-top: none;">TABLE</td>
+                                    </tr>
+                                    <tr height="17" style="height: 12.75pt;">
+                                        <td class="xl64" height="17" style="border-top: none; height: 12.75pt;">B2B_TRANSPORT_MANAGER</td>
+                                        <td class="xl64" style="border-left: none; border-top: none;">TABLE</td>
+                                    </tr>
+                                    <tr height="17" style="height: 12.75pt;">
+                                        <td class="xl64" height="17" style="border-top: none; height: 12.75pt;">B2B_HA_REGISTRY</td>
+                                        <td class="xl64" style="border-left: none; border-top: none;">TABLE</td>
+                                    </tr>
+                                    <tr height="17" style="height: 12.75pt;">
+                                        <td class="xl64" height="17" style="border-top: none; height: 12.75pt;">B2B_LIFECYCLE</td>
+                                        <td class="xl64" style="border-left: none; border-top: none;">TABLE</td>
+                                    </tr>
+                                    <tr height="17" style="height: 12.75pt;">
+                                        <td class="xl64" height="17" style="border-top: none; height: 12.75pt;">B2B_SEQUENCE_MANAGER</td>
+                                        <td class="xl64" style="border-left: none; border-top: none;">TABLE</td>
+                                    </tr>
+                                    <tr height="17" style="height: 12.75pt;">
+                                        <td class="xl64" height="17" style="border-top: none; height: 12.75pt;">B2B_CONTROL_NUMBER_SET</td>
+                                        <td class="xl64" style="border-left: none; border-top: none;">TABLE</td>
+                                    </tr>
+                                    <tr height="17" style="height: 12.75pt;">
+                                        <td class="xl64" height="17" style="border-top: none; height: 12.75pt;">B2B_CTL_NUMBER</td>
+                                        <td class="xl64" style="border-left: none; border-top: none;">TABLE</td>
+                                    </tr>
+                                    <tr height="17" style="height: 12.75pt;">
+                                        <td class="xl64" height="17" style="border-top: none; height: 12.75pt;">B2B_BUSINESS_MESSAGE_RETRY</td>
+                                        <td class="xl64" style="border-left: none; border-top: none;">TABLE</td>
+                                    </tr>
+                                    <tr height="17" style="height: 12.75pt;">
+                                        <td class="xl64" height="17" style="border-top: none; height: 12.75pt;">B2B_PARAMETER</td>
+                                        <td class="xl64" style="border-left: none; border-top: none;">TABLE</td>
+                                    </tr>
+                                    <tr height="17" style="height: 12.75pt;">
+                                        <td class="xl64" height="17" style="border-top: none; height: 12.75pt;">B2B_PURGE_TEMP_BM</td>
+                                        <td class="xl64" style="border-left: none; border-top: none;">TABLE</td>
+                                    </tr>
+                                    <tr height="17" style="height: 12.75pt;">
+                                        <td class="xl64" height="17" style="border-top: none; height: 12.75pt;">B2B_PURGE_TEMP_WM</td>
+                                        <td class="xl64" style="border-left: none; border-top: none;">TABLE</td>
+                                    </tr>
+                                    <tr height="17" style="height: 12.75pt;">
+                                        <td class="xl64" height="17" style="border-top: none; height: 12.75pt;">B2B_PURGE_TEMP_AM</td>
+                                        <td class="xl64" style="border-left: none; border-top: none;">TABLE</td>
+                                    </tr>
+                                    <tr height="17" style="height: 12.75pt;">
+                                        <td class="xl64" height="17" style="border-top: none; height: 12.75pt;">B2B_AUDIT_TEMP</td>
+                                        <td class="xl64" style="border-left: none; border-top: none;">TABLE</td>
+                                    </tr>
+                                    <tr height="17" style="height: 12.75pt;">
+                                        <td class="xl64" height="17" style="border-top: none; height: 12.75pt;">B2B_LOCK_REGISTRY</td>
+                                        <td class="xl64" style="border-left: none; border-top: none;">TABLE</td>
+                                    </tr>
+                                    <tr height="17" style="height: 12.75pt;">
+                                        <td class="xl64" height="17" style="border-top: none; height: 12.75pt;">B2B_INSTANCEMESSAGE</td>
+                                        <td class="xl64" style="border-left: none; border-top: none;">VIEW</td>
+                                    </tr>
+                                    <tr height="17" style="height: 12.75pt;">
+                                        <td class="xl64" height="17" style="border-top: none; height: 12.75pt;">WFAPPROVALGROUPS</td>
+                                        <td class="xl64" style="border-left: none; border-top: none;">TABLE</td>
+                                    </tr>
+                                    <tr height="17" style="height: 12.75pt;">
+                                        <td class="xl64" height="17" style="border-top: none; height: 12.75pt;">WFAPPROVALGROUPMEMBERS</td>
+                                        <td class="xl64" style="border-left: none; border-top: none;">TABLE</td>
+                                    </tr>
+                                    <tr height="17" style="height: 12.75pt;">
+                                        <td class="xl64" height="17" style="border-top: none; height: 12.75pt;">WFPRODUCTIVITY_VIEW</td>
+                                        <td class="xl64" style="border-left: none; border-top: none;">VIEW</td>
+                                    </tr>
+                                    <tr height="17" style="height: 12.75pt;">
+                                        <td class="xl64" height="17" style="border-top: none; height: 12.75pt;">WFUNATTENDEDTASKS_VIEW</td>
+                                        <td class="xl64" style="border-left: none; border-top: none;">VIEW</td>
+                                    </tr>
+                                    <tr height="17" style="height: 12.75pt;">
+                                        <td class="xl64" height="17" style="border-top: none; height: 12.75pt;">WFTASKCYCLETIME_VIEW</td>
+                                        <td class="xl64" style="border-left: none; border-top: none;">VIEW</td>
+                                    </tr>
+                                    <tr height="17" style="height: 12.75pt;">
+                                        <td class="xl64" height="17" style="border-top: none; height: 12.75pt;">WFTASKPRIORITY_VIEW</td>
+                                        <td class="xl64" style="border-left: none; border-top: none;">VIEW</td>
+                                    </tr>
+                                    <tr height="17" style="height: 12.75pt;">
+                                        <td class="xl64" height="17" style="border-top: none; height: 12.75pt;">WFTASKASSIGNMENTHISTORY_VIEW</td>
+                                        <td class="xl64" style="border-left: none; border-top: none;">VIEW</td>
+                                    </tr>
+                                    <tr height="17" style="height: 12.75pt;">
+                                        <td class="xl64" height="17" style="border-top: none; height: 12.75pt;">BPM_HOLIDAY_RULE</td>
+                                        <td class="xl64" style="border-left: none; border-top: none;">TABLE</td>
+                                    </tr>
+                                    <tr height="17" style="height: 12.75pt;">
+                                        <td class="xl64" height="17" style="border-top: none; height: 12.75pt;">BPM_HOLIDAYS</td>
+                                        <td class="xl64" style="border-left: none; border-top: none;">TABLE</td>
+                                    </tr>
+                                    <tr height="17" style="height: 12.75pt;">
+                                        <td class="xl64" height="17" style="border-top: none; height: 12.75pt;">BPM_CALENDAR_RULE</td>
+                                        <td class="xl64" style="border-left: none; border-top: none;">TABLE</td>
+                                    </tr>
+                                    <tr height="17" style="height: 12.75pt;">
+                                        <td class="xl64" height="17" style="border-top: none; height: 12.75pt;">BPM_CALENDAR_WORKDAY</td>
+                                        <td class="xl64" style="border-left: none; border-top: none;">TABLE</td>
+                                    </tr>
+                                    <tr height="17" style="height: 12.75pt;">
+                                        <td class="xl64" height="17" style="border-top: none; height: 12.75pt;">BPM_EXT_USER_PROPERTY_GLOBAL</td>
+                                        <td class="xl64" style="border-left: none; border-top: none;">TABLE</td>
+                                    </tr>
+                                    <tr height="17" style="height: 12.75pt;">
+                                        <td class="xl64" height="17" style="border-top: none; height: 12.75pt;">BPM_EXT_USER_PROP_AVLBL_COL</td>
+                                        <td class="xl64" style="border-left: none; border-top: none;">TABLE</td>
+                                    </tr>
+                                    <tr height="17" style="height: 12.75pt;">
+                                        <td class="xl64" height="17" style="border-top: none; height: 12.75pt;">BPM_EXT_USER_PROPERTY_VALUE</td>
+                                        <td class="xl64" style="border-left: none; border-top: none;">TABLE</td>
+                                    </tr>
+                                    <tr height="17" style="height: 12.75pt;">
+                                        <td class="xl64" height="17" style="border-top: none; height: 12.75pt;">BPM_ORGANIZATIONAL_UNIT</td>
+                                        <td class="xl64" style="border-left: none; border-top: none;">TABLE</td>
+                                    </tr>
+                                    <tr height="17" style="height: 12.75pt;">
+                                        <td class="xl64" height="17" style="border-top: none; height: 12.75pt;">BPM_OU_USER</td>
+                                        <td class="xl64" style="border-left: none; border-top: none;">TABLE</td>
+                                    </tr>
+                                    <tr height="17" style="height: 12.75pt;">
+                                        <td class="xl64" height="17" style="border-top: none; height: 12.75pt;">BPM_OU_MANAGER</td>
+                                        <td class="xl64" style="border-left: none; border-top: none;">TABLE</td>
+                                    </tr>
+                                    <tr height="17" style="height: 12.75pt;">
+                                        <td class="xl64" height="17" style="border-top: none; height: 12.75pt;">BPM_APP_ROLE_OU_CAL_ASSOC</td>
+                                        <td class="xl64" style="border-left: none; border-top: none;">TABLE</td>
+                                    </tr>
+                                    <tr height="17" style="height: 12.75pt;">
+                                        <td class="xl64" height="17" style="border-top: none; height: 12.75pt;">BPM_PP_ENTITY_GS_MAP</td>
+                                        <td class="xl64" style="border-left: none; border-top: none;">TABLE</td>
+                                    </tr>
+                                    <tr height="17" style="height: 12.75pt;">
+                                        <td class="xl64" height="17" style="border-top: none; height: 12.75pt;">BPM_LOGICAL_PEOPLE_GROUP</td>
+                                        <td class="xl64" style="border-left: none; border-top: none;">TABLE</td>
+                                    </tr>
+                                    <tr height="17" style="height: 12.75pt;">
+                                        <td class="xl64" height="17" style="border-top: none; height: 12.75pt;">BPM_LPG_MEMBER</td>
+                                        <td class="xl64" style="border-left: none; border-top: none;">TABLE</td>
+                                    </tr>
+                                    <tr height="17" style="height: 12.75pt;">
+                                        <td class="xl64" height="17" style="border-top: none; height: 12.75pt;">DOCUMENTPACKAGEINSTANCE</td>
+                                        <td class="xl64" style="border-left: none; border-top: none;">TABLE</td>
+                                    </tr>
+                                    <tr height="17" style="height: 12.75pt;">
+                                        <td class="xl64" height="17" style="border-top: none; height: 12.75pt;">DOCUMENTPACKAGEPROPERTIES</td>
+                                        <td class="xl64" style="border-left: none; border-top: none;">TABLE</td>
+                                    </tr>
+                                    <tr height="17" style="height: 12.75pt;">
+                                        <td class="xl64" height="17" style="border-top: none; height: 12.75pt;">DOCUMENTPACKAGEPROPERTIESMAP</td>
+                                        <td class="xl64" style="border-left: none; border-top: none;">TABLE</td>
+                                    </tr>
+                                    <tr height="17" style="height: 12.75pt;">
+                                        <td class="xl64" height="17" style="border-top: none; height: 12.75pt;">DOCUMENTPACKAGEDEFINITION</td>
+                                        <td class="xl64" style="border-left: none; border-top: none;">TABLE</td>
+                                    </tr>
+                                    <tr height="17" style="height: 12.75pt;">
+                                        <td class="xl64" height="17" style="border-top: none; height: 12.75pt;">DOCUMENTDEFINITION</td>
+                                        <td class="xl64" style="border-left: none; border-top: none;">TABLE</td>
+                                    </tr>
+                                    <tr height="17" style="height: 12.75pt;">
+                                        <td class="xl64" height="17" style="border-top: none; height: 12.75pt;">DOCUMENTINSTANCE</td>
+                                        <td class="xl64" style="border-left: none; border-top: none;">TABLE</td>
+                                    </tr>
+                                    <tr height="17" style="height: 12.75pt;">
+                                        <td class="xl64" height="17" style="border-top: none; height: 12.75pt;">DOCUMENTPACKAGEPROCESS</td>
+                                        <td class="xl64" style="border-left: none; border-top: none;">TABLE</td>
+                                    </tr>
+                                    <tr height="17" style="height: 12.75pt;">
+                                        <td class="xl64" height="17" style="border-top: none; height: 12.75pt;">BPM_PRESENTATION_GRANT</td>
+                                        <td class="xl64" style="border-left: none; border-top: none;">TABLE</td>
+                                    </tr>
+                                    <tr height="17" style="height: 12.75pt;">
+                                        <td class="xl64" height="17" style="border-top: none; height: 12.75pt;">WFUSERTASKVIEW</td>
+                                        <td class="xl64" style="border-left: none; border-top: none;">TABLE</td>
+                                    </tr>
+                                    <tr height="17" style="height: 12.75pt;">
+                                        <td class="xl64" height="17" style="border-top: none; height: 12.75pt;">WFUSERTASKVIEWGRANT</td>
+                                        <td class="xl64" style="border-left: none; border-top: none;">TABLE</td>
+                                    </tr>
+                                    <tr height="17" style="height: 12.75pt;">
+                                        <td class="xl64" height="17" style="border-top: none; height: 12.75pt;">WFUSERPREFERENCE</td>
+                                        <td class="xl64" style="border-left: none; border-top: none;">TABLE</td>
+                                    </tr>
+                                    <tr height="17" style="height: 12.75pt;">
+                                        <td class="xl64" height="17" style="border-top: none; height: 12.75pt;">BPM_USERAPPLICATIONDATA</td>
+                                        <td class="xl64" style="border-left: none; border-top: none;">TABLE</td>
+                                    </tr>
+                                    <tr height="17" style="height: 12.75pt;">
+                                        <td class="xl64" height="17" style="border-top: none; height: 12.75pt;">BPM_USERAPPLICATIONDATA_GRANT</td>
+                                        <td class="xl64" style="border-left: none; border-top: none;">TABLE</td>
+                                    </tr>
+                                    <tr height="17" style="height: 12.75pt;">
+                                        <td class="xl64" height="17" style="border-top: none; height: 12.75pt;">WFRULEDICTIONARY</td>
+                                        <td class="xl64" style="border-left: none; border-top: none;">TABLE</td>
+                                    </tr>
+                                    <tr height="17" style="height: 12.75pt;">
+                                        <td class="xl64" height="17" style="border-top: none; height: 12.75pt;">WFTASKDISPLAY</td>
+                                        <td class="xl64" style="border-left: none; border-top: none;">TABLE</td>
+                                    </tr>
+                                    <tr height="17" style="height: 12.75pt;">
+                                        <td class="xl64" height="17" style="border-top: none; height: 12.75pt;">WFTASKTIMER</td>
+                                        <td class="xl64" style="border-left: none; border-top: none;">TABLE</td>
+                                    </tr>
+                                    <tr height="17" style="height: 12.75pt;">
+                                        <td class="xl64" height="17" style="border-top: none; height: 12.75pt;">WFNOTIFICATIONMESSAGES</td>
+                                        <td class="xl64" style="border-left: none; border-top: none;">TABLE</td>
+                                    </tr>
+                                    <tr height="17" style="height: 12.75pt;">
+                                        <td class="xl64" height="17" style="border-top: none; height: 12.75pt;">WFTASKERROR</td>
+                                        <td class="xl64" style="border-left: none; border-top: none;">TABLE</td>
+                                    </tr>
+                                    <tr height="17" style="height: 12.75pt;">
+                                        <td class="xl64" height="17" style="border-top: none; height: 12.75pt;">WFHEADERPROPS</td>
+                                        <td class="xl64" style="border-left: none; border-top: none;">TABLE</td>
+                                    </tr>
+                                    <tr height="17" style="height: 12.75pt;">
+                                        <td class="xl64" height="17" style="border-top: none; height: 12.75pt;">WFCERTAUTHORITY</td>
+                                        <td class="xl64" style="border-left: none; border-top: none;">TABLE</td>
+                                    </tr>
+                                    <tr height="17" style="height: 12.75pt;">
+                                        <td class="xl64" height="17" style="border-top: none; height: 12.75pt;">WFCERTIFICATEREVOKED</td>
+                                        <td class="xl64" style="border-left: none; border-top: none;">TABLE</td>
+                                    </tr>
+                                    <tr height="17" style="height: 12.75pt;">
+                                        <td class="xl64" height="17" style="border-top: none; height: 12.75pt;">WFCERTIFICATE</td>
+                                        <td class="xl64" style="border-left: none; border-top: none;">TABLE</td>
+                                    </tr>
+                                    <tr height="17" style="height: 12.75pt;">
+                                        <td class="xl64" height="17" style="border-top: none; height: 12.75pt;">WFEVIDENCE</td>
+                                        <td class="xl64" style="border-left: none; border-top: none;">TABLE</td>
+                                    </tr>
+                                    <tr height="17" style="height: 12.75pt;">
+                                        <td class="xl64" height="17" style="border-top: none; height: 12.75pt;">WFTASKASSIGNMENTSTATISTIC</td>
+                                        <td class="xl64" style="border-left: none; border-top: none;">TABLE</td>
+                                    </tr>
+                                    <tr height="17" style="height: 12.75pt;">
+                                        <td class="xl64" height="17" style="border-top: none; height: 12.75pt;">WFTASKSEQUENCECHANGES</td>
+                                        <td class="xl64" style="border-left: none; border-top: none;">TABLE</td>
+                                    </tr>
+                                    <tr height="17" style="height: 12.75pt;">
+                                        <td class="xl64" height="17" style="border-top: none; height: 12.75pt;">WFTASKAGGREGATION</td>
+                                        <td class="xl64" style="border-left: none; border-top: none;">TABLE</td>
+                                    </tr>
+                                    <tr height="17" style="height: 12.75pt;">
+                                        <td class="xl64" height="17" style="border-top: none; height: 12.75pt;">SOAQTZ_SIMPLE_TRIGGERS</td>
+                                        <td class="xl64" style="border-left: none; border-top: none;">TABLE</td>
+                                    </tr>
+                                    <tr height="17" style="height: 12.75pt;">
+                                        <td class="xl64" height="17" style="border-top: none; height: 12.75pt;">SOAQTZ_CRON_TRIGGERS</td>
+                                        <td class="xl64" style="border-left: none; border-top: none;">TABLE</td>
+                                    </tr>
+                                    <tr height="17" style="height: 12.75pt;">
+                                        <td class="xl64" height="17" style="border-top: none; height: 12.75pt;">SOAQTZ_BLOB_TRIGGERS</td>
+                                        <td class="xl64" style="border-left: none; border-top: none;">TABLE</td>
+                                    </tr>
+                                    <tr height="17" style="height: 12.75pt;">
+                                        <td class="xl64" height="17" style="border-top: none; height: 12.75pt;">SOAQTZ_TRIGGER_LISTENERS</td>
+                                        <td class="xl64" style="border-left: none; border-top: none;">TABLE</td>
+                                    </tr>
+                                    <tr height="17" style="height: 12.75pt;">
+                                        <td class="xl64" height="17" style="border-top: none; height: 12.75pt;">SOAQTZ_CALENDARS</td>
+                                        <td class="xl64" style="border-left: none; border-top: none;">TABLE</td>
+                                    </tr>
+                                    <tr height="17" style="height: 12.75pt;">
+                                        <td class="xl64" height="17" style="border-top: none; height: 12.75pt;">SOAQTZ_PAUSED_TRIGGER_GRPS</td>
+                                        <td class="xl64" style="border-left: none; border-top: none;">TABLE</td>
+                                    </tr>
+                                    <tr height="17" style="height: 12.75pt;">
+                                        <td class="xl64" height="17" style="border-top: none; height: 12.75pt;">SOAQTZ_FIRED_TRIGGERS</td>
+                                        <td class="xl64" style="border-left: none; border-top: none;">TABLE</td>
+                                    </tr>
+                                    <tr height="17" style="height: 12.75pt;">
+                                        <td class="xl64" height="17" style="border-top: none; height: 12.75pt;">SOAQTZ_SCHEDULER_STATE</td>
+                                        <td class="xl64" style="border-left: none; border-top: none;">TABLE</td>
+                                    </tr>
+                                    <tr height="17" style="height: 12.75pt;">
+                                        <td class="xl64" height="17" style="border-top: none; height: 12.75pt;">SOAQTZ_LOCKS</td>
+                                        <td class="xl64" style="border-left: none; border-top: none;">TABLE</td>
+                                    </tr>
+                                    <tr height="17" style="height: 12.75pt;">
+                                        <td class="xl64" height="17" style="border-top: none; height: 12.75pt;">MEDIATOR_INSTANCE</td>
+                                        <td class="xl64" style="border-left: none; border-top: none;">TABLE</td>
+                                    </tr>
+                                    <tr height="17" style="height: 12.75pt;">
+                                        <td class="xl64" height="17" style="border-top: none; height: 12.75pt;">MEDIATOR_CASE_INSTANCE</td>
+                                        <td class="xl64" style="border-left: none; border-top: none;">TABLE</td>
+                                    </tr>
+                                    <tr height="17" style="height: 12.75pt;">
+                                        <td class="xl64" height="17" style="border-top: none; height: 12.75pt;">MEDIATOR_CASE_DETAIL</td>
+                                        <td class="xl64" style="border-left: none; border-top: none;">TABLE</td>
+                                    </tr>
+                                    <tr height="17" style="height: 12.75pt;">
+                                        <td class="xl65" height="17" style="border-top: none; height: 12.75pt;">MEDIATOR_CALLBACK</td>
+                                        <td class="xl64" style="border-left: none; border-top: none;">TABLE</td>
+                                    </tr>
+                                    <tr height="17" style="height: 12.75pt;">
+                                        <td class="xl65" height="17" style="border-top: none; height: 12.75pt;">MEDIATOR_CORRELATION</td>
+                                        <td class="xl64" style="border-left: none; border-top: none;">TABLE</td>
+                                    </tr>
+                                    <tr height="17" style="height: 12.75pt;">
+                                        <td class="xl64" height="17" style="border-top: none; height: 12.75pt;">MEDIATOR_AUDIT_DOCUMENT</td>
+                                        <td class="xl64" style="border-left: none; border-top: none;">TABLE</td>
+                                    </tr>
+                                    <tr height="17" style="height: 12.75pt;">
+                                        <td class="xl64" height="17" style="border-top: none; height: 12.75pt;">MEDIATOR_CASE_DETAIL_V</td>
+                                        <td class="xl64" style="border-left: none; border-top: none;">VIEW</td>
+                                    </tr>
+                                    <tr height="17" style="height: 12.75pt;">
+                                        <td class="xl65" height="17" style="border-top: none; height: 12.75pt;">MEDIATOR_PAYLOAD</td>
+                                        <td class="xl64" style="border-left: none; border-top: none;">TABLE</td>
+                                    </tr>
+                                    <tr height="17" style="height: 12.75pt;">
+                                        <td class="xl64" height="17" style="border-top: none; height: 12.75pt;">MEDIATOR_DEFERRED_MESSAGE</td>
+                                        <td class="xl64" style="border-left: none; border-top: none;">TABLE</td>
+                                    </tr>
+                                    <tr height="17" style="height: 12.75pt;">
+                                        <td class="xl64" height="17" style="border-top: none; height: 12.75pt;">MEDIATOR_CONTAINERID_LEASE</td>
+                                        <td class="xl64" style="border-left: none; border-top: none;">TABLE</td>
+                                    </tr>
+                                    <tr height="17" style="height: 12.75pt;">
+                                        <td class="xl64" height="17" style="border-top: none; height: 12.75pt;">MEDIATOR_GROUP_STATUS</td>
+                                        <td class="xl64" style="border-left: none; border-top: none;">TABLE</td>
+                                    </tr>
+                                    <tr height="17" style="height: 12.75pt;">
+                                        <td class="xl64" height="17" style="border-top: none; height: 12.75pt;">MEDIATOR_RESEQUENCER_MESSAGE</td>
+                                        <td class="xl64" style="border-left: none; border-top: none;">TABLE</td>
+                                    </tr>
+                                    <tr height="17" style="height: 12.75pt;">
+                                        <td class="xl64" height="17" style="border-top: none; height: 12.75pt;">SENSOR_SEQUENCE</td>
+                                        <td class="xl64" style="border-left: none; border-top: none;">TABLE</td>
+                                    </tr>
+                                    <tr height="17" style="height: 12.75pt;">
+                                        <td class="xl65" height="17" style="border-top: none; height: 12.75pt;">ACTIVITY_SENSOR_VALUES</td>
+                                        <td class="xl64" style="border-left: none; border-top: none;">TABLE</td>
+                                    </tr>
+                                    <tr height="17" style="height: 12.75pt;">
+                                        <td class="xl65" height="17" style="border-top: none; height: 12.75pt;">VARIABLE_SENSOR_VALUES</td>
+                                        <td class="xl64" style="border-left: none; border-top: none;">TABLE</td>
+                                    </tr>
+                                    <tr height="17" style="height: 12.75pt;">
+                                        <td class="xl65" height="17" style="border-top: none; height: 12.75pt;">FAULT_SENSOR_VALUES</td>
+                                        <td class="xl64" style="border-left: none; border-top: none;">TABLE</td>
+                                    </tr>
+                                    <tr height="17" style="height: 12.75pt;">
+                                        <td class="xl65" height="17" style="border-top: none; height: 12.75pt;">BPEL_PROCESS_INSTANCES</td>
+                                        <td class="xl64" style="border-left: none; border-top: none;">VIEW</td>
+                                    </tr>
+                                    <tr height="17" style="height: 12.75pt;">
+                                        <td class="xl65" height="17" style="border-top: none; height: 12.75pt;">BPEL_ACTIVITY_SENSOR_VALUES</td>
+                                        <td class="xl64" style="border-left: none; border-top: none;">VIEW</td>
+                                    </tr>
+                                    <tr height="17" style="height: 12.75pt;">
+                                        <td class="xl65" height="17" style="border-top: none; height: 12.75pt;">BPEL_VARIABLE_SENSOR_VALUES</td>
+                                        <td class="xl64" style="border-left: none; border-top: none;">VIEW</td>
+                                    </tr>
+                                    <tr height="17" style="height: 12.75pt;">
+                                        <td class="xl65" height="17" style="border-top: none; height: 12.75pt;">BPEL_VARIABLE_ANALYSIS_REPORT</td>
+                                        <td class="xl64" style="border-left: none; border-top: none;">VIEW</td>
+                                    </tr>
+                                    <tr height="17" style="height: 12.75pt;">
+                                        <td class="xl65" height="17" style="border-top: none; height: 12.75pt;">BPEL_FAULT_SENSOR_VALUES</td>
+                                        <td class="xl64" style="border-left: none; border-top: none;">VIEW</td>
+                                    </tr>
+                                    <tr height="17" style="height: 12.75pt;">
+                                        <td class="xl64" height="17" style="border-top: none; height: 12.75pt;">BPM_SEQUENCE</td>
+                                        <td class="xl64" style="border-left: none; border-top: none;">TABLE</td>
+                                    </tr>
+                                    <tr height="17" style="height: 12.75pt;">
+                                        <td class="xl64" height="17" style="border-top: none; height: 12.75pt;">BPM_PROCESS</td>
+                                        <td class="xl64" style="border-left: none; border-top: none;">TABLE</td>
+                                    </tr>
+                                    <tr height="17" style="height: 12.75pt;">
+                                        <td class="xl64" height="17" style="border-top: none; height: 12.75pt;">BPM_PROCESS_PARTNER</td>
+                                        <td class="xl64" style="border-left: none; border-top: none;">TABLE</td>
+                                    </tr>
+                                    <tr height="17" style="height: 12.75pt;">
+                                        <td class="xl64" height="17" style="border-top: none; height: 12.75pt;">BPM_PARTNER_SERVICE</td>
+                                        <td class="xl64" style="border-left: none; border-top: none;">TABLE</td>
+                                    </tr>
+                                    <tr height="17" style="height: 12.75pt;">
+                                        <td class="xl64" height="17" style="border-top: none; height: 12.75pt;">BPM_ACTIVITY</td>
+                                        <td class="xl64" style="border-left: none; border-top: none;">TABLE</td>
+                                    </tr>
+                                    <tr height="17" style="height: 12.75pt;">
+                                        <td class="xl64" height="17" style="border-top: none; height: 12.75pt;">BPM_ACTIVITY_PROPERTY</td>
+                                        <td class="xl64" style="border-left: none; border-top: none;">TABLE</td>
+                                    </tr>
+                                    <tr height="17" style="height: 12.75pt;">
+                                        <td class="xl64" height="17" style="border-top: none; height: 12.75pt;">BPM_PROCESS_PARTNER_SERVICE_V</td>
+                                        <td class="xl64" style="border-left: none; border-top: none;">VIEW</td>
+                                    </tr>
+                                    <tr height="17" style="height: 12.75pt;">
+                                        <td class="xl64" height="17" style="border-top: none; height: 12.75pt;">BPM_ACTIVITY_INSTANCE</td>
+                                        <td class="xl64" style="border-left: none; border-top: none;">TABLE</td>
+                                    </tr>
+                                    <tr height="17" style="height: 12.75pt;">
+                                        <td class="xl64" height="17" style="border-top: none; height: 12.75pt;">WI_EXPIRABLE</td>
+                                        <td class="xl64" style="border-left: none; border-top: none;">VIEW</td>
+                                    </tr>
+                                    <tr height="17" style="height: 12.75pt;">
+                                        <td class="xl64" height="17" style="border-top: none; height: 12.75pt;">WI_EXPIRABLE_CLUSTER</td>
+                                        <td class="xl64" style="border-left: none; border-top: none;">VIEW</td>
+                                    </tr>
+                                    <tr height="17" style="height: 12.75pt;">
+                                        <td class="xl64" height="17" style="border-top: none; height: 12.75pt;">DS_UNRESOLVED</td>
+                                        <td class="xl64" style="border-left: none; border-top: none;">VIEW</td>
+                                    </tr>
+                                    <tr height="17" style="height: 12.75pt;">
+                                        <td class="xl64" height="17" style="border-top: none; height: 12.75pt;">DS_RESOLVED</td>
+                                        <td class="xl64" style="border-left: none; border-top: none;">VIEW</td>
+                                    </tr>
+                                    <tr height="17" style="height: 12.75pt;">
+                                        <td class="xl64" height="17" style="border-top: none; height: 12.75pt;">BRSEQUENCE</td>
+                                        <td class="xl64" style="border-left: none; border-top: none;">TABLE</td>
+                                    </tr>
+                                    <tr height="17" style="height: 12.75pt;">
+                                        <td class="xl64" height="17" style="border-top: none; height: 12.75pt;">BRDECISIONINSTANCE</td>
+                                        <td class="xl64" style="border-left: none; border-top: none;">TABLE</td>
+                                    </tr>
+                                    <tr height="17" style="height: 12.75pt;">
+                                        <td class="xl64" height="17" style="border-top: none; height: 12.75pt;">BRDECISIONUNITOFWORK</td>
+                                        <td class="xl64" style="border-left: none; border-top: none;">TABLE</td>
+                                    </tr>
+                                    <tr height="17" style="height: 12.75pt;">
+                                        <td class="xl64" height="17" style="border-top: none; height: 12.75pt;">BRDECISIONFAULT</td>
+                                        <td class="xl64" style="border-left: none; border-top: none;">TABLE</td>
+                                    </tr>
+                                    <tr height="17" style="height: 12.75pt;">
+                                        <td class="xl64" height="17" style="border-top: none; height: 12.75pt;">DECISIONCOMPONENTINSTANCEVIEW</td>
+                                        <td class="xl64" style="border-left: none; border-top: none;">VIEW</td>
+                                    </tr>
+                                    <tr height="17" style="height: 12.75pt;">
+                                        <td class="xl64" height="17" style="border-top: none; height: 12.75pt;">DECISIONCOMPONENTERRORVIEW</td>
+                                        <td class="xl64" style="border-left: none; border-top: none;">VIEW</td>
+                                    </tr>
+                                    <tr height="17" style="height: 12.75pt;">
+                                        <td class="xl64" height="17" style="border-top: none; height: 12.75pt;">SOAQTZ_JOB_DETAILS</td>
+                                        <td class="xl64" style="border-left: none; border-top: none;">TABLE</td>
+                                    </tr>
+                                    <tr height="17" style="height: 12.75pt;">
+                                        <td class="xl64" height="17" style="border-top: none; height: 12.75pt;">SOAQTZ_JOB_LISTENERS</td>
+                                        <td class="xl64" style="border-left: none; border-top: none;">TABLE</td>
+                                    </tr>
+                                    <tr height="17" style="height: 12.75pt;">
+                                        <td class="xl64" height="17" style="border-top: none; height: 12.75pt;">SOAQTZ_TRIGGERS</td>
+                                        <td class="xl64" style="border-left: none; border-top: none;">TABLE</td>
+                                    </tr>
+                                    <tr height="17" style="height: 12.75pt;">
+                                        <td class="xl64" height="17" style="border-top: none; height: 12.75pt;">EDN_EVENT_SUBSCRIPTIONS</td>
+                                        <td class="xl64" style="border-left: none; border-top: none;">TABLE</td>
+                                    </tr>
+                                    <tr height="17" style="height: 12.75pt;">
+                                        <td class="xl64" height="17" style="border-top: none; height: 12.75pt;">EDN_RETRY_COUNT</td>
+                                        <td class="xl64" style="border-left: none; border-top: none;">TABLE</td>
+                                    </tr>
+                                    <tr height="17" style="height: 12.75pt;">
+                                        <td class="xl64" height="17" style="border-top: none; height: 12.75pt;">EDN_CLUSTERS</td>
+                                        <td class="xl64" style="border-left: none; border-top: none;">TABLE</td>
+                                    </tr>
+                                    <tr height="17" style="height: 12.75pt;">
+                                        <td class="xl64" height="17" style="border-top: none; height: 12.75pt;">EDN_EVENT_ERROR_STORE</td>
+                                        <td class="xl64" style="border-left: none; border-top: none;">TABLE</td>
+                                    </tr>
+                                    <tr height="17" style="height: 12.75pt;">
+                                        <td class="xl64" height="17" style="border-top: none; height: 12.75pt;">EDN_EVENT_QUEUE_TABLE</td>
+                                        <td class="xl64" style="border-left: none; border-top: none;">TABLE</td>
+                                    </tr>
+                                    <tr height="17" style="height: 12.75pt;">
+                                        <td class="xl64" height="17" style="border-top: none; height: 12.75pt;">AQ$_EDN_EVENT_QUEUE_TABLE_S</td>
+                                        <td class="xl64" style="border-left: none; border-top: none;">TABLE</td>
+                                    </tr>
+                                    <tr height="17" style="height: 12.75pt;">
+                                        <td class="xl64" height="17" style="border-top: none; height: 12.75pt;">AQ$_EDN_EVENT_QUEUE_TABLE_T</td>
+                                        <td class="xl64" style="border-left: none; border-top: none;">TABLE</td>
+                                    </tr>
+                                    <tr height="17" style="height: 12.75pt;">
+                                        <td class="xl64" height="17" style="border-top: none; height: 12.75pt;">AQ$EDN_EVENT_QUEUE_TABLE_S</td>
+                                        <td class="xl64" style="border-left: none; border-top: none;">VIEW</td>
+                                    </tr>
+                                    <tr height="17" style="height: 12.75pt;">
+                                        <td class="xl64" height="17" style="border-top: none; height: 12.75pt;">AQ$_EDN_EVENT_QUEUE_TABLE_H</td>
+                                        <td class="xl64" style="border-left: none; border-top: none;">TABLE</td>
+                                    </tr>
+                                    <tr height="17" style="height: 12.75pt;">
+                                        <td class="xl64" height="17" style="border-top: none; height: 12.75pt;">SYS_IOT_OVER_89447</td>
+                                        <td class="xl64" style="border-left: none; border-top: none;">TABLE</td>
+                                    </tr>
+                                    <tr height="17" style="height: 12.75pt;">
+                                        <td class="xl64" height="17" style="border-top: none; height: 12.75pt;">AQ$_EDN_EVENT_QUEUE_TABLE_G</td>
+                                        <td class="xl64" style="border-left: none; border-top: none;">TABLE</td>
+                                    </tr>
+                                    <tr height="17" style="height: 12.75pt;">
+                                        <td class="xl64" height="17" style="border-top: none; height: 12.75pt;">AQ$_EDN_EVENT_QUEUE_TABLE_I</td>
+                                        <td class="xl64" style="border-left: none; border-top: none;">TABLE</td>
+                                    </tr>
+                                    <tr height="17" style="height: 12.75pt;">
+                                        <td class="xl64" height="17" style="border-top: none; height: 12.75pt;">AQ$_EDN_EVENT_QUEUE_TABLE_F</td>
+                                        <td class="xl64" style="border-left: none; border-top: none;">VIEW</td>
+                                    </tr>
+                                    <tr height="17" style="height: 12.75pt;">
+                                        <td class="xl64" height="17" style="border-top: none; height: 12.75pt;">AQ$EDN_EVENT_QUEUE_TABLE</td>
+                                        <td class="xl64" style="border-left: none; border-top: none;">VIEW</td>
+                                    </tr>
+                                    <tr height="17" style="height: 12.75pt;">
+                                        <td class="xl64" height="17" style="border-top: none; height: 12.75pt;">AQ$EDN_EVENT_QUEUE_TABLE_R</td>
+                                        <td class="xl64" style="border-left: none; border-top: none;">VIEW</td>
+                                    </tr>
+                                    <tr height="17" style="height: 12.75pt;">
+                                        <td class="xl64" height="17" style="border-top: none; height: 12.75pt;">EDN_OAOO_DELIVERY_TABLE</td>
+                                        <td class="xl64" style="border-left: none; border-top: none;">TABLE</td>
+                                    </tr>
+                                    <tr height="17" style="height: 12.75pt;">
+                                        <td class="xl64" height="17" style="border-top: none; height: 12.75pt;">AQ$_EDN_OAOO_DELIVERY_TABLE_S</td>
+                                        <td class="xl64" style="border-left: none; border-top: none;">TABLE</td>
+                                    </tr>
+                                    <tr height="17" style="height: 12.75pt;">
+                                        <td class="xl64" height="17" style="border-top: none; height: 12.75pt;">AQ$_EDN_OAOO_DELIVERY_TABLE_T</td>
+                                        <td class="xl64" style="border-left: none; border-top: none;">TABLE</td>
+                                    </tr>
+                                    <tr height="17" style="height: 12.75pt;">
+                                        <td class="xl64" height="17" style="border-top: none; height: 12.75pt;">AQ$EDN_OAOO_DELIVERY_TABLE_S</td>
+                                        <td class="xl64" style="border-left: none; border-top: none;">VIEW</td>
+                                    </tr>
+                                    <tr height="17" style="height: 12.75pt;">
+                                        <td class="xl64" height="17" style="border-top: none; height: 12.75pt;">AQ$_EDN_OAOO_DELIVERY_TABLE_H</td>
+                                        <td class="xl64" style="border-left: none; border-top: none;">TABLE</td>
+                                    </tr>
+                                    <tr height="17" style="height: 12.75pt;">
+                                        <td class="xl64" height="17" style="border-top: none; height: 12.75pt;">SYS_IOT_OVER_89475</td>
+                                        <td class="xl64" style="border-left: none; border-top: none;">TABLE</td>
+                                    </tr>
+                                    <tr height="17" style="height: 12.75pt;">
+                                        <td class="xl64" height="17" style="border-top: none; height: 12.75pt;">AQ$_EDN_OAOO_DELIVERY_TABLE_G</td>
+                                        <td class="xl64" style="border-left: none; border-top: none;">TABLE</td>
+                                    </tr>
+                                    <tr height="17" style="height: 12.75pt;">
+                                        <td class="xl64" height="17" style="border-top: none; height: 12.75pt;">AQ$_EDN_OAOO_DELIVERY_TABLE_I</td>
+                                        <td class="xl64" style="border-left: none; border-top: none;">TABLE</td>
+                                    </tr>
+                                    <tr height="17" style="height: 12.75pt;">
+                                        <td class="xl64" height="17" style="border-top: none; height: 12.75pt;">AQ$_EDN_OAOO_DELIVERY_TABLE_F</td>
+                                        <td class="xl64" style="border-left: none; border-top: none;">VIEW</td>
+                                    </tr>
+                                    <tr height="17" style="height: 12.75pt;">
+                                        <td class="xl64" height="17" style="border-top: none; height: 12.75pt;">AQ$EDN_OAOO_DELIVERY_TABLE</td>
+                                        <td class="xl64" style="border-left: none; border-top: none;">VIEW</td>
+                                    </tr>
+                                    <tr height="17" style="height: 12.75pt;">
+                                        <td class="xl64" height="17" style="border-top: none; height: 12.75pt;">AQ$EDN_OAOO_DELIVERY_TABLE_R</td>
+                                        <td class="xl64" style="border-left: none; border-top: none;">VIEW</td>
+                                    </tr>
+                                    <tr height="17" style="height: 12.75pt;">
+                                        <td class="xl64" height="17" style="border-top: none; height: 12.75pt;">WFTASKHISTORY_TL</td>
+                                        <td class="xl64" style="border-left: none; border-top: none;">TABLE</td>
+                                    </tr>
+                                    <tr height="17" style="height: 12.75pt;">
+                                        <td class="xl64" height="17" style="border-top: none; height: 12.75pt;">WFCOMMENTS</td>
+                                        <td class="xl64" style="border-left: none; border-top: none;">TABLE</td>
+                                    </tr>
+                                    <tr height="17" style="height: 12.75pt;">
+                                        <td class="xl64" height="17" style="border-top: none; height: 12.75pt;">WFMESSAGEATTRIBUTE</td>
+                                        <td class="xl64" style="border-left: none; border-top: none;">TABLE</td>
+                                    </tr>
+                                    <tr height="17" style="height: 12.75pt;">
+                                        <td class="xl64" height="17" style="border-top: none; height: 12.75pt;">WFATTACHMENT</td>
+                                        <td class="xl64" style="border-left: none; border-top: none;">TABLE</td>
+                                    </tr>
+                                    <tr height="17" style="height: 12.75pt;">
+                                        <td class="xl64" height="17" style="border-top: none; height: 12.75pt;">WFASSIGNEE</td>
+                                        <td class="xl64" style="border-left: none; border-top: none;">TABLE</td>
+                                    </tr>
+                                    <tr height="17" style="height: 12.75pt;">
+                                        <td class="xl64" height="17" style="border-top: none; height: 12.75pt;">WFREVIEWER</td>
+                                        <td class="xl64" style="border-left: none; border-top: none;">TABLE</td>
+                                    </tr>
+                                    <tr height="17" style="height: 12.75pt;">
+                                        <td class="xl64" height="17" style="border-top: none; height: 12.75pt;">WFCOLLECTIONTARGET</td>
+                                        <td class="xl64" style="border-left: none; border-top: none;">TABLE</td>
+                                    </tr>
+                                    <tr height="17" style="height: 12.75pt;">
+                                        <td class="xl64" height="17" style="border-top: none; height: 12.75pt;">WFROUTINGSLIP</td>
+                                        <td class="xl64" style="border-left: none; border-top: none;">TABLE</td>
+                                    </tr>
+                                    <tr height="17" style="height: 12.75pt;">
+                                        <td class="xl64" height="17" style="border-top: none; height: 12.75pt;">WFNOTIFICATION</td>
+                                        <td class="xl64" style="border-left: none; border-top: none;">TABLE</td>
+                                    </tr>
+                                    <tr height="17" style="height: 12.75pt;">
+                                        <td class="xl64" height="17" style="border-top: none; height: 12.75pt;">WFNOTIFICATIONSTATUS</td>
+                                        <td class="xl64" style="border-left: none; border-top: none;">TABLE</td>
+                                    </tr>
+                                    <tr height="17" style="height: 12.75pt;">
+                                        <td class="xl64" height="17" style="border-top: none; height: 12.75pt;">BPELNOTIFICATION</td>
+                                        <td class="xl64" style="border-left: none; border-top: none;">TABLE</td>
+                                    </tr>
+                                    <tr height="17" style="height: 12.75pt;">
+                                        <td class="xl64" height="17" style="border-top: none; height: 12.75pt;">BPELNOTIFICATION_FILTERMSGS</td>
+                                        <td class="xl64" style="border-left: none; border-top: none;">TABLE</td>
+                                    </tr>
+                                    <tr height="17" style="height: 12.75pt;">
+                                        <td class="xl64" height="17" style="border-top: none; height: 12.75pt;">BPELNOTIFICATION_INVALADDRS</td>
+                                        <td class="xl64" style="border-left: none; border-top: none;">TABLE</td>
+                                    </tr>
+                                    <tr height="17" style="height: 12.75pt;">
+                                        <td class="xl64" height="17" style="border-top: none; height: 12.75pt;">WFTASKMETADATA</td>
+                                        <td class="xl64" style="border-left: none; border-top: none;">TABLE</td>
+                                    </tr>
+                                    <tr height="17" style="height: 12.75pt;">
+                                        <td class="xl64" height="17" style="border-top: none; height: 12.75pt;">WFATTRIBUTELABELMAP</td>
+                                        <td class="xl64" style="border-left: none; border-top: none;">TABLE</td>
+                                    </tr>
+                                    <tr height="17" style="height: 12.75pt;">
+                                        <td class="xl64" height="17" style="border-top: none; height: 12.75pt;">WFATTRIBUTELABELUSAGE</td>
+                                        <td class="xl64" style="border-left: none; border-top: none;">TABLE</td>
+                                    </tr>
+                                    <tr height="17" style="height: 12.75pt;">
+                                        <td class="xl64" height="17" style="border-top: none; height: 12.75pt;">WFUSERVACATION</td>
+                                        <td class="xl64" style="border-left: none; border-top: none;">TABLE</td>
+                                    </tr>
+                                    <tr height="17" style="height: 12.75pt;">
+                                        <td class="xl64" height="17" style="border-top: none; height: 12.75pt;">BPM_PRESENTATION</td>
+                                        <td class="xl64" style="border-left: none; border-top: none;">TABLE</td>
+                                    </tr>
+                                    <tr height="17" style="height: 12.75pt;">
+                                        <td class="xl64" height="17" style="border-top: none; height: 12.75pt;">LOAN_CUSTOMER</td>
+                                        <td class="xl64" style="border-left: none; border-top: none;">TABLE</td>
+                                    </tr>
+                                    <tr height="17" style="height: 12.75pt;">
+                                        <td class="xl64" height="17" style="border-top: none; height: 12.75pt;">PC_TASK</td>
+                                        <td class="xl64" style="border-left: none; border-top: none;">TABLE</td>
+                                    </tr>
+                                    <tr height="17" style="height: 12.75pt;">
+                                        <td class="xl64" height="17" style="border-top: none; height: 12.75pt;">PC_TASKASSIGNEE</td>
+                                        <td class="xl64" style="border-left: none; border-top: none;">TABLE</td>
+                                    </tr>
+                                    <tr height="17" style="height: 12.75pt;">
+                                        <td class="xl64" height="17" style="border-top: none; height: 12.75pt;">PC_TASKASSIGNEEHISTORY</td>
+                                        <td class="xl64" style="border-left: none; border-top: none;">TABLE</td>
+                                    </tr>
+                                    <tr height="17" style="height: 12.75pt;">
+                                        <td class="xl64" height="17" style="border-top: none; height: 12.75pt;">PC_TASKHISTORY</td>
+                                        <td class="xl64" style="border-left: none; border-top: none;">TABLE</td>
+                                    </tr>
+                                    <tr height="17" style="height: 12.75pt;">
+                                        <td class="xl64" height="17" style="border-top: none; height: 12.75pt;">PC_TASKATTACHMENT</td>
+                                        <td class="xl64" style="border-left: none; border-top: none;">TABLE</td>
+                                    </tr>
+                                    <tr height="17" style="height: 12.75pt;">
+                                        <td class="xl64" height="17" style="border-top: none; height: 12.75pt;">PC_TASKPAYLOAD</td>
+                                        <td class="xl64" style="border-left: none; border-top: none;">TABLE</td>
+                                    </tr>
+                                    <tr height="17" style="height: 12.75pt;">
+                                        <td class="xl64" height="17" style="border-top: none; height: 12.75pt;">PC_OWF</td>
+                                        <td class="xl64" style="border-left: none; border-top: none;">TABLE</td>
+                                    </tr>
+                                    <tr height="17" style="height: 12.75pt;">
+                                        <td class="xl64" height="17" style="border-top: none; height: 12.75pt;">WFTASK</td>
+                                        <td class="xl64" style="border-left: none; border-top: none;">TABLE</td>
+                                    </tr>
+                                    <tr height="17" style="height: 12.75pt;">
+                                        <td class="xl64" height="17" style="border-top: none; height: 12.75pt;">WFTASK_TL</td>
+                                        <td class="xl64" style="border-left: none; border-top: none;">TABLE</td>
+                                    </tr>
+                                    <tr height="17" style="height: 12.75pt;">
+                                        <td class="xl64" height="17" style="border-top: none; height: 12.75pt;">WFTASKHISTORY</td>
+                                        <td class="xl64" style="border-left: none; border-top: none;">TABLE</td>
+                                    </tr>
+                                    <tr height="17" style="height: 12.75pt;">
+                                        <td class="xl65" height="17" style="border-top: none; height: 12.75pt;">JCA_NATIVE_CORRELATION</td>
+                                        <td class="xl64" style="border-left: none; border-top: none;">TABLE</td>
+                                    </tr>
+                                    <tr height="17" style="height: 12.75pt;">
+                                        <td class="xl65" height="17" style="border-top: none; height: 12.75pt;">VERSION</td>
+                                        <td class="xl64" style="border-left: none; border-top: none;">TABLE</td>
+                                    </tr>
+                                    <tr height="17" style="height: 12.75pt;">
+                                        <td class="xl64" height="17" style="border-top: none; height: 12.75pt;">ID_RANGE</td>
+                                        <td class="xl64" style="border-left: none; border-top: none;">TABLE</td>
+                                    </tr>
+                                    <tr height="17" style="height: 12.75pt;">
+                                        <td class="xl64" height="17" style="border-top: none; height: 12.75pt;">UPGRADE_INFO</td>
+                                        <td class="xl64" style="border-left: none; border-top: none;">TABLE</td>
+                                    </tr>
+                                    <tr height="17" style="height: 12.75pt;">
+                                        <td class="xl65" height="17" style="border-top: none; height: 12.75pt;">CUBE_INSTANCE</td>
+                                        <td class="xl64" style="border-left: none; border-top: none;">TABLE</td>
+                                    </tr>
+                                    <tr height="17" style="height: 12.75pt;">
+                                        <td class="xl65" height="17" style="border-top: none; height: 12.75pt;">CUBE_SCOPE</td>
+                                        <td class="xl64" style="border-left: none; border-top: none;">TABLE</td>
+                                    </tr>
+                                    <tr height="17" style="height: 12.75pt;">
+                                        <td class="xl64" height="17" style="border-top: none; height: 12.75pt;">CI_INDEXES</td>
+                                        <td class="xl64" style="border-left: none; border-top: none;">TABLE</td>
+                                    </tr>
+                                    <tr height="17" style="height: 12.75pt;">
+                                        <td class="xl64" height="17" style="border-top: none; height: 12.75pt;">WORK_ITEM</td>
+                                        <td class="xl64" style="border-left: none; border-top: none;">TABLE</td>
+                                    </tr>
+                                    <tr height="17" style="height: 12.75pt;">
+                                        <td class="xl64" height="17" style="border-top: none; height: 12.75pt;">WI_FAULT</td>
+                                        <td class="xl64" style="border-left: none; border-top: none;">TABLE</td>
+                                    </tr>
+                                    <tr height="17" style="height: 12.75pt;">
+                                        <td class="xl64" height="17" style="border-top: none; height: 12.75pt;">HEADERS_PROPERTIES</td>
+                                        <td class="xl64" style="border-left: none; border-top: none;">TABLE</td>
+                                    </tr>
+                                    <tr height="17" style="height: 12.75pt;">
+                                        <td class="xl65" height="17" style="border-top: none; height: 12.75pt;">AUDIT_TRAIL</td>
+                                        <td class="xl64" style="border-left: none; border-top: none;">TABLE</td>
+                                    </tr>
+                                    <tr height="17" style="height: 12.75pt;">
+                                        <td class="xl65" height="17" style="border-top: none; height: 12.75pt;">AUDIT_DETAILS</td>
+                                        <td class="xl64" style="border-left: none; border-top: none;">TABLE</td>
+                                    </tr>
+                                    <tr height="17" style="height: 12.75pt;">
+                                        <td class="xl65" height="17" style="border-top: none; height: 12.75pt;">DLV_MESSAGE</td>
+                                        <td class="xl64" style="border-left: none; border-top: none;">TABLE</td>
+                                    </tr>
+                                    <tr height="17" style="height: 12.75pt;">
+                                        <td class="xl65" height="17" style="border-top: none; height: 12.75pt;">DLV_SUBSCRIPTION</td>
+                                        <td class="xl64" style="border-left: none; border-top: none;">TABLE</td>
+                                    </tr>
+                                    <tr height="17" style="height: 12.75pt;">
+                                        <td class="xl64" height="17" style="border-top: none; height: 12.75pt;">DOCUMENT_CI_REF</td>
+                                        <td class="xl64" style="border-left: none; border-top: none;">TABLE</td>
+                                    </tr>
+                                    <tr height="17" style="height: 12.75pt;">
+                                        <td class="xl64" height="17" style="border-top: none; height: 12.75pt;">DOCUMENT_DLV_MSG_REF</td>
+                                        <td class="xl64" style="border-left: none; border-top: none;">TABLE</td>
+                                    </tr>
+                                    <tr height="17" style="height: 12.75pt;">
+                                        <td class="xl64" height="17" style="border-top: none; height: 12.75pt;">NATIVE_CORRELATION</td>
+                                        <td class="xl64" style="border-left: none; border-top: none;">TABLE</td>
+                                    </tr>
+                                    <tr height="17" style="height: 12.75pt;">
+                                        <td class="xl64" height="17" style="border-top: none; height: 12.75pt;">TEST_DEFINITIONS</td>
+                                        <td class="xl64" style="border-left: none; border-top: none;">TABLE</td>
+                                    </tr>
+                                    <tr height="17" style="height: 12.75pt;">
+                                        <td class="xl64" height="17" style="border-top: none; height: 12.75pt;">TEST_DETAILS</td>
+                                        <td class="xl64" style="border-left: none; border-top: none;">TABLE</td>
+                                    </tr>
+                                    <tr height="17" style="height: 12.75pt;">
+                                        <td class="xl64" height="17" style="border-top: none; height: 12.75pt;">AG_INSTANCE</td>
+                                        <td class="xl64" style="border-left: none; border-top: none;">TABLE</td>
+                                    </tr>
+                                    <tr height="17" style="height: 12.75pt;">
+                                        <td class="xl64" height="17" style="border-top: none; height: 12.75pt;">AUDIT_COUNTER</td>
+                                        <td class="xl64" style="border-left: none; border-top: none;">TABLE</td>
+                                    </tr>
+                                    <tr height="17" style="height: 12.75pt;">
+                                        <td class="xl64" height="17" style="border-top: none; height: 12.75pt;">CLUSTER_MASTER</td>
+                                        <td class="xl64" style="border-left: none; border-top: none;">TABLE</td>
+                                    </tr>
+                                    <tr height="17" style="height: 12.75pt;">
+                                        <td class="xl64" height="17" style="border-top: none; height: 12.75pt;">CLUSTER_NODE</td>
+                                        <td class="xl64" style="border-left: none; border-top: none;">TABLE</td>
+                                    </tr>
+                                    <tr height="17" style="height: 12.75pt;">
+                                        <td class="xl64" height="17" style="border-top: none; height: 12.75pt;">ADMIN_LIST_CI</td>
+                                        <td class="xl64" style="border-left: none; border-top: none;">VIEW</td>
+                                    </tr>
+                                    <tr height="17" style="height: 12.75pt;">
+                                        <td class="xl64" height="17" style="border-top: none; height: 12.75pt;">ADMIN_LIST_CX</td>
+                                        <td class="xl64" style="border-left: none; border-top: none;">VIEW</td>
+                                    </tr>
+                                    <tr height="17" style="height: 12.75pt;">
+                                        <td class="xl64" height="17" style="border-top: none; height: 12.75pt;">ADMIN_LIST_WI</td>
+                                        <td class="xl64" style="border-left: none; border-top: none;">VIEW</td>
+                                    </tr>
+                                    <tr height="17" style="height: 12.75pt;">
+                                        <td class="xl64" height="17" style="border-top: none; height: 12.75pt;">ADMIN_LIST_TD</td>
+                                        <td class="xl64" style="border-left: none; border-top: none;">VIEW</td>
+                                    </tr>
+                                    <tr height="17" style="height: 12.75pt;">
+                                        <td class="xl64" height="17" style="border-top: none; height: 12.75pt;">ADMIN_LIST_TDEF</td>
+                                        <td class="xl64" style="border-left: none; border-top: none;">VIEW</td>
+                                    </tr>
+                                    <tr height="17" style="height: 12.75pt;">
+                                        <td class="xl64" height="17" style="border-top: none; height: 12.75pt;">DBG_WI</td>
+                                        <td class="xl64" style="border-left: none; border-top: none;">VIEW</td>
+                                    </tr>
+                                    <tr height="17" style="height: 12.75pt;">
+                                        <td class="xl64" height="17" style="border-top: none; height: 12.75pt;">ACTIVITY_PERF</td>
+                                        <td class="xl64" style="border-left: none; border-top: none;">VIEW</td>
+                                    </tr>
+                                    <tr height="17" style="height: 12.75pt;">
+                                        <td class="xl64" height="17" style="border-top: none; height: 12.75pt;">INSTANCE_PERF</td>
+                                        <td class="xl64" style="border-left: none; border-top: none;">VIEW</td>
+                                    </tr>
+                                    <tr height="17" style="height: 12.75pt;">
+                                        <td class="xl65" height="17" style="border-top: none; height: 12.75pt;">BPEL_FAULTS_VW</td>
+                                        <td class="xl64" style="border-left: none; border-top: none;">VIEW</td>
+                                    </tr>
+                                    <tr height="17" style="height: 12.75pt;">
+                                        <td class="xl64" height="17" style="border-top: none; height: 12.75pt;">BPM_CUBE_AUDITINSTANCE</td>
+                                        <td class="xl64" style="border-left: none; border-top: none;">TABLE</td>
+                                    </tr>
+                                    <tr height="17" style="height: 12.75pt;">
+                                        <td class="xl64" height="17" style="border-top: none; height: 12.75pt;">BPM_CUBE_LOCK</td>
+                                        <td class="xl64" style="border-left: none; border-top: none;">TABLE</td>
+                                    </tr>
+                                    <tr height="17" style="height: 12.75pt;">
+                                        <td class="xl64" height="17" style="border-top: none; height: 12.75pt;">BPM_CUBE_PROCESSPERFORMANCE</td>
+                                        <td class="xl64" style="border-left: none; border-top: none;">TABLE</td>
+                                    </tr>
+                                    <tr height="17" style="height: 12.75pt;">
+                                        <td class="xl64" height="17" style="border-top: none; height: 12.75pt;">BPM_CUBE_TASKPERFORMANCE</td>
+                                        <td class="xl64" style="border-left: none; border-top: none;">TABLE</td>
+                                    </tr>
+                                    <tr height="17" style="height: 12.75pt;">
+                                        <td class="xl64" height="17" style="border-top: none; height: 12.75pt;">BPM_CUBE_WORKLOAD</td>
+                                        <td class="xl64" style="border-left: none; border-top: none;">TABLE</td>
+                                    </tr>
+                                    <tr height="17" style="height: 12.75pt;">
+                                        <td class="xl64" height="17" style="border-top: none; height: 12.75pt;">BPM_CUBE_AUDITINST_FLEX01</td>
+                                        <td class="xl64" style="border-left: none; border-top: none;">TABLE</td>
+                                    </tr>
+                                    <tr height="17" style="height: 12.75pt;">
+                                        <td class="xl64" height="17" style="border-top: none; height: 12.75pt;">BPM_CUBE_PROCPERF_FLEX01</td>
+                                        <td class="xl64" style="border-left: none; border-top: none;">TABLE</td>
+                                    </tr>
+                                    <tr height="17" style="height: 12.75pt;">
+                                        <td class="xl64" height="17" style="border-top: none; height: 12.75pt;">BPM_CUBE_TASKPERF_FLEX01</td>
+                                        <td class="xl64" style="border-left: none; border-top: none;">TABLE</td>
+                                    </tr>
+                                    <tr height="17" style="height: 12.75pt;">
+                                        <td class="xl64" height="17" style="border-top: none; height: 12.75pt;">BPM_CUBE_WORKLOAD_FLEX01</td>
+                                        <td class="xl64" style="border-left: none; border-top: none;">TABLE</td>
+                                    </tr>
+                                    <tr height="17" style="height: 12.75pt;">
+                                        <td class="xl64" height="17" style="border-top: none; height: 12.75pt;">BPM_CUBE_NAMETAB</td>
+                                        <td class="xl64" style="border-left: none; border-top: none;">TABLE</td>
+                                    </tr>
+                                    <tr height="17" style="height: 12.75pt;">
+                                        <td class="xl64" height="17" style="border-top: none; height: 12.75pt;">BPM_CUBE_NAMETAB_RANGE</td>
+                                        <td class="xl64" style="border-left: none; border-top: none;">TABLE</td>
+                                    </tr>
+                                    <tr height="17" style="height: 12.75pt;">
+                                        <td class="xl64" height="17" style="border-top: none; height: 12.75pt;">BPM_CUBE_PROCESS_PARTNER_SVC_V</td>
+                                        <td class="xl64" style="border-left: none; border-top: none;">VIEW</td>
+                                    </tr>
+                                    <tr height="17" style="height: 12.75pt;">
+                                        <td class="xl64" height="17" style="border-top: none; height: 12.75pt;">BPM_CUBE_ACTIVITY_INSTANCE</td>
+                                        <td class="xl64" style="border-left: none; border-top: none;">TABLE</td>
+                                    </tr>
+                                    <tr height="17" style="height: 12.75pt;">
+                                        <td class="xl64" height="17" style="border-top: none; height: 12.75pt;">BPM_MEASUREMENT_ACTION_SEQ</td>
+                                        <td class="xl64" style="border-left: none; border-top: none;">TABLE</td>
+                                    </tr>
+                                    <tr height="17" style="height: 12.75pt;">
+                                        <td class="xl64" height="17" style="border-top: none; height: 12.75pt;">BPM_MEASUREMENT_ACTION_EXCEPS</td>
+                                        <td class="xl64" style="border-left: none; border-top: none;">TABLE</td>
+                                    </tr>
+                                    <tr height="17" style="height: 12.75pt;">
+                                        <td class="xl64" height="17" style="border-top: none; height: 12.75pt;">BPM_MEASUREMENT_ACTIONS</td>
+                                        <td class="xl64" style="border-left: none; border-top: none;">TABLE</td>
+                                    </tr>
+                                    <tr height="17" style="height: 12.75pt;">
+                                        <td class="xl64" height="17" style="border-top: none; height: 12.75pt;">BPM_CASE</td>
+                                        <td class="xl64" style="border-left: none; border-top: none;">TABLE</td>
+                                    </tr>
+                                    <tr height="17" style="height: 12.75pt;">
+                                        <td class="xl64" height="17" style="border-top: none; height: 12.75pt;">BPM_CASE_ACTIVITIES</td>
+                                        <td class="xl64" style="border-left: none; border-top: none;">TABLE</td>
+                                    </tr>
+                                    <tr height="17" style="height: 12.75pt;">
+                                        <td class="xl64" height="17" style="border-top: none; height: 12.75pt;">BPM_CASE_DATA</td>
+                                        <td class="xl64" style="border-left: none; border-top: none;">TABLE</td>
+                                    </tr>
+                                    <tr height="17" style="height: 12.75pt;">
+                                        <td class="xl64" height="17" style="border-top: none; height: 12.75pt;">BPM_CASE_ATTRIBUTES</td>
+                                        <td class="xl64" style="border-left: none; border-top: none;">TABLE</td>
+                                    </tr>
+                                    <tr height="17" style="height: 12.75pt;">
+                                        <td class="xl64" height="17" style="border-top: none; height: 12.75pt;">BPM_PROJECTSHAREDATA_SEQ</td>
+                                        <td class="xl64" style="border-left: none; border-top: none;">TABLE</td>
+                                    </tr>
+                                    <tr height="17" style="height: 12.75pt;">
+                                        <td class="xl64" height="17" style="border-top: none; height: 12.75pt;">BPM_PROJECTSHAREDATA</td>
+                                        <td class="xl64" style="border-left: none; border-top: none;">TABLE</td>
+                                    </tr>
+                                    <tr height="17" style="height: 12.75pt;">
+                                        <td class="xl64" height="17" style="border-top: none; height: 12.75pt;">LABEL_VERSION_PCBPEL</td>
+                                        <td class="xl64" style="border-left: none; border-top: none;">TABLE</td>
+                                    </tr>
+                                    <tr height="17" style="height: 12.75pt;">
+                                        <td class="xl65" height="17" style="border-top: none; height: 12.75pt;">COMPOSITE_INSTANCE</td>
+                                        <td class="xl64" style="border-left: none; border-top: none;">TABLE</td>
+                                    </tr>
+                                    <tr height="17" style="height: 12.75pt;">
+                                        <td class="xl64" height="17" style="border-top: none; height: 12.75pt;">COMPOSITE_INSTANCE_ASSOC</td>
+                                        <td class="xl64" style="border-left: none; border-top: none;">TABLE</td>
+                                    </tr>
+                                    <tr height="17" style="height: 12.75pt;">
+                                        <td class="xl65" height="17" style="border-top: none; height: 12.75pt;">COMPONENT_INSTANCE</td>
+                                        <td class="xl64" style="border-left: none; border-top: none;">TABLE</td>
+                                    </tr>
+                                    <tr height="17" style="height: 12.75pt;">
+                                        <td class="xl65" height="17" style="border-top: none; height: 12.75pt;">REFERENCE_INSTANCE</td>
+                                        <td class="xl64" style="border-left: none; border-top: none;">TABLE</td>
+                                    </tr>
+                                    <tr height="17" style="height: 12.75pt;">
+                                        <td class="xl64" height="17" style="border-top: none; height: 12.75pt;">BRIDGE_INSTANCE</td>
+                                        <td class="xl64" style="border-left: none; border-top: none;">TABLE</td>
+                                    </tr>
+                                    <tr height="17" style="height: 12.75pt;">
+                                        <td class="xl64" height="17" style="border-top: none; height: 12.75pt;">COMPOSITE_INSTANCE_FAULT</td>
+                                        <td class="xl64" style="border-left: none; border-top: none;">TABLE</td>
+                                    </tr>
+                                    <tr height="17" style="height: 12.75pt;">
+                                        <td class="xl64" height="17" style="border-top: none; height: 12.75pt;">REJECTED_MESSAGE</td>
+                                        <td class="xl64" style="border-left: none; border-top: none;">TABLE</td>
+                                    </tr>
+                                    <tr height="17" style="height: 12.75pt;">
+                                        <td class="xl64" height="17" style="border-top: none; height: 12.75pt;">INSTANCE_PAYLOAD</td>
+                                        <td class="xl64" style="border-left: none; border-top: none;">TABLE</td>
+                                    </tr>
+                                    <tr height="17" style="height: 12.75pt;">
+                                        <td class="xl64" height="17" style="border-top: none; height: 12.75pt;">COMPOSITE_SENSOR_VALUE</td>
+                                        <td class="xl64" style="border-left: none; border-top: none;">TABLE</td>
+                                    </tr>
+                                    <tr height="17" style="height: 12.75pt;">
+                                        <td class="xl64" height="17" style="border-top: none; height: 12.75pt;">SEQUENCE</td>
+                                        <td class="xl64" style="border-left: none; border-top: none;">TABLE</td>
+                                    </tr>
+                                    <tr height="17" style="height: 12.75pt;">
+                                        <td class="xl64" height="17" style="border-top: none; height: 12.75pt;">TEST_INSTANCE</td>
+                                        <td class="xl64" style="border-left: none; border-top: none;">TABLE</td>
+                                    </tr>
+                                    <tr height="17" style="height: 12.75pt;">
+                                        <td class="xl64" height="17" style="border-top: none; height: 12.75pt;">REJECTED_MSG_NATIVE_PAYLOAD</td>
+                                        <td class="xl64" style="border-left: none; border-top: none;">TABLE</td>
+                                    </tr>
+                                    <tr height="17" style="height: 12.75pt;">
+                                        <td class="xl64" height="17" style="border-top: none; height: 12.75pt;">XML_DOCUMENT</td>
+                                        <td class="xl64" style="border-left: none; border-top: none;">TABLE</td>
+                                    </tr>
+                                    <tr height="17" style="height: 12.75pt;">
+                                        <td class="xl64" height="17" style="border-top: none; height: 12.75pt;">ATTACHMENT</td>
+                                        <td class="xl64" style="border-left: none; border-top: none;">TABLE</td>
+                                    </tr>
+                                    <tr height="17" style="height: 12.75pt;">
+                                        <td class="xl64" height="17" style="border-top: none; height: 12.75pt;">ATTACHMENT_REF</td>
+                                        <td class="xl64" style="border-left: none; border-top: none;">TABLE</td>
+                                    </tr>
+                                    <tr height="17" style="height: 12.75pt;">
+                                        <td class="xl64" height="17" style="border-top: none; height: 12.75pt;">XML_DOCUMENT_REF</td>
+                                        <td class="xl64" style="border-left: none; border-top: none;">TABLE</td>
+                                    </tr>
+                                    <tr height="17" style="height: 12.75pt;">
+                                        <td class="xl65" height="17" style="border-top: none; height: 12.75pt;">FILEADAPTER_IN</td>
+                                        <td class="xl64" style="border-left: none; border-top: none;">TABLE</td>
+                                    </tr>
+                                    <tr height="17" style="height: 12.75pt;">
+                                        <td class="xl64" height="17" style="border-top: none; height: 12.75pt;">FILEADAPTER_MUTEX</td>
+                                        <td class="xl64" style="border-left: none; border-top: none;">TABLE</td>
+                                    </tr>
+                                    <tr height="17" style="height: 12.75pt;">
+                                        <td class="xl64" height="17" style="border-top: none; height: 12.75pt;">TEMP_CUBE_INSTANCE</td>
+                                        <td class="xl64" style="border-left: none; border-top: none;">TABLE</td>
+                                    </tr>
+                                    <tr height="17" style="height: 12.75pt;">
+                                        <td class="xl64" height="17" style="border-top: none; height: 12.75pt;">TEMP_DOCUMENT_CI_REF</td>
+                                        <td class="xl64" style="border-left: none; border-top: none;">TABLE</td>
+                                    </tr>
+                                    <tr height="17" style="height: 12.75pt;">
+                                        <td class="xl64" height="17" style="border-top: none; height: 12.75pt;">TEMP_DOCUMENT_DLV_MSG_REF</td>
+                                        <td class="xl64" style="border-left: none; border-top: none;">TABLE</td>
+                                    </tr>
+                                    <tr height="17" style="height: 12.75pt;">
+                                        <td class="xl64" height="17" style="border-top: none; height: 12.75pt;">TEMP_XML_DOCUMENT</td>
+                                        <td class="xl64" style="border-left: none; border-top: none;">TABLE</td>
+                                    </tr>
+                                    <tr height="17" style="height: 12.75pt;">
+                                        <td class="xl64" height="17" style="border-top: none; height: 12.75pt;">COMPOSITE_INSTANCE_PURGE</td>
+                                        <td class="xl64" style="border-left: none; border-top: none;">TABLE</td>
+                                    </tr>
+                                    <tr height="17" style="height: 12.75pt;">
+                                        <td class="xl64" height="17" style="border-top: none; height: 12.75pt;">REFERENCE_INSTANCE_PURGE</td>
+                                        <td class="xl64" style="border-left: none; border-top: none;">TABLE</td>
+                                    </tr>
+                                    <tr height="17" style="height: 12.75pt;">
+                                        <td class="xl64" height="17" style="border-top: none; height: 12.75pt;">COMPOSITE_FAULT_PURGE</td>
+                                        <td class="xl64" style="border-left: none; border-top: none;">TABLE</td>
+                                    </tr>
+                                    <tr height="17" style="height: 12.75pt;">
+                                        <td class="xl64" height="17" style="border-top: none; height: 12.75pt;">REJECTED_MESSAGE_PURGE</td>
+                                        <td class="xl64" style="border-left: none; border-top: none;">TABLE</td>
+                                    </tr>
+                                    <tr height="17" style="height: 12.75pt;">
+                                        <td class="xl64" height="17" style="border-top: none; height: 12.75pt;">COMPONENT_INSTANCE_PURGE</td>
+                                        <td class="xl64" style="border-left: none; border-top: none;">TABLE</td>
+                                    </tr>
+                                    <tr height="17" style="height: 12.75pt;">
+                                        <td class="xl64" height="17" style="border-top: none; height: 12.75pt;">TEMP_BRDECISION_INSTANCE</td>
+                                        <td class="xl64" style="border-left: none; border-top: none;">TABLE</td>
+                                    </tr>
+                                    <tr height="17" style="height: 12.75pt;">
+                                        <td class="xl64" height="17" style="border-top: none; height: 12.75pt;">TEMP_WFTASK_PURGE</td>
+                                        <td class="xl64" style="border-left: none; border-top: none;">TABLE</td>
+                                    </tr>
+                                    <tr height="17" style="height: 12.75pt;">
+                                        <td class="xl64" height="17" style="border-top: none; height: 12.75pt;">TEMP_MEDIATOR_INSTANCE</td>
+                                        <td class="xl64" style="border-left: none; border-top: none;">TABLE</td>
+                                    </tr>
+                                    <tr height="17" style="height: 12.75pt;">
+                                        <td class="xl64" height="17" style="border-top: none; height: 12.75pt;">PRUNE_RUNNING_INSTS</td>
+                                        <td class="xl64" style="border-left: none; border-top: none;">TABLE</td>
+                                    </tr>
+                                    <tr height="17" style="height: 12.75pt;">
+                                        <td class="xl64" height="17" style="border-top: none; height: 12.75pt;">ECID_PURGE</td>
+                                        <td class="xl64" style="border-left: none; border-top: none;">TABLE</td>
+                                    </tr>
+                                    <tr height="17" style="height: 12.75pt;">
+                                        <td class="xl64" height="17" style="border-top: none; height: 12.75pt;">JOB_FLOW_CONTROL</td>
+                                        <td class="xl64" style="border-left: none; border-top: none;">TABLE</td>
+                                    </tr>
+                                    <tr height="17" style="height: 12.75pt;">
+                                        <td class="xl64" height="17" style="border-top: none; height: 12.75pt;">B2B_BAM_QTAB</td>
+                                        <td class="xl64" style="border-left: none; border-top: none;">TABLE</td>
+                                    </tr>
+                                    <tr height="17" style="height: 12.75pt;">
+                                        <td class="xl64" height="17" style="border-top: none; height: 12.75pt;">AQ$_B2B_BAM_QTAB_F</td>
+                                        <td class="xl64" style="border-left: none; border-top: none;">VIEW</td>
+                                    </tr>
+                                    <tr height="17" style="height: 12.75pt;">
+                                        <td class="xl64" height="17" style="border-top: none; height: 12.75pt;">AQ$B2B_BAM_QTAB</td>
+                                        <td class="xl64" style="border-left: none; border-top: none;">VIEW</td>
+                                    </tr>
+                                    <tr height="17" style="height: 12.75pt;">
+                                        <td class="xl64" height="17" style="border-top: none; height: 12.75pt;">USRSWAP_CORRELATION</td>
+                                        <td class="xl64" style="border-left: none; border-top: none;">TABLE</td>
+                                    </tr>
+                                    <tr height="17" style="height: 12.75pt;">
+                                        <td class="xl64" height="17" style="border-top: none; height: 12.75pt;">WL_LLR_ADMINSERVER</td>
+                                        <td class="xl64" style="border-left: none; border-top: none;">TABLE</td>
+                                    </tr>
+                                </tbody>
+                            </table>
+                            <br />
+                            <br />
+                            <br />
+                            <b>List of tables ,which we&nbsp;frequently use for our daily work around in SOA 11g .&nbsp;</b>
+                            <br />
+                            <br />
+                            <br />
+                            <table border="0" cellpadding="0" cellspacing="0" style="border-collapse: collapse; width: 394px;">
+                                <colgroup>
+                                    <col style="mso-width-alt: 14409; mso-width-source: userset; width: 296pt;" width="394"></col>
+                                </colgroup>
+                                <tbody>
+                                    <tr height="17" style="height: 12.75pt;">
+                                        <td class="xl65" height="17" style="height: 12.75pt; width: 296pt;" width="394">AUDIT_TRAIL</td>
+                                    </tr>
+                                    <tr height="17" style="height: 12.75pt;">
+                                        <td class="xl65" height="17" style="border-top: none; height: 12.75pt;">CUBE_INSTANCE</td>
+                                    </tr>
+                                    <tr height="17" style="height: 12.75pt;">
+                                        <td class="xl65" height="17" style="border-top: none; height: 12.75pt;">CUBE_SCOPE</td>
+                                    </tr>
+                                    <tr height="17" style="height: 12.75pt;">
+                                        <td class="xl65" height="17" style="border-top: none; height: 12.75pt;">COMPOSITE_INSTANCE</td>
+                                    </tr>
+                                    <tr height="17" style="height: 12.75pt;">
+                                        <td class="xl65" height="17" style="border-top: none; height: 12.75pt;">COMPONENT_INSTANCE</td>
+                                    </tr>
+                                    <tr height="17" style="height: 12.75pt;">
+                                        <td class="xl65" height="17" style="border-top: none; height: 12.75pt;">MEDIATOR_CALLBACK</td>
+                                    </tr>
+                                    <tr height="17" style="height: 12.75pt;">
+                                        <td class="xl65" height="17" style="border-top: none; height: 12.75pt;">MEDIATOR_CORRELATION</td>
+                                    </tr>
+                                    <tr height="17" style="height: 12.75pt;">
+                                        <td class="xl65" height="17" style="border-top: none; height: 12.75pt;">BPEL_PROCESS_INSTANCES</td>
+                                    </tr>
+                                    <tr height="17" style="height: 12.75pt;">
+                                        <td class="xl65" height="17" style="border-top: none; height: 12.75pt;">BPEL_ACTIVITY_SENSOR_VALUES</td>
+                                    </tr>
+                                    <tr height="17" style="height: 12.75pt;">
+                                        <td class="xl65" height="17" style="border-top: none; height: 12.75pt;">BPEL_VARIABLE_SENSOR_VALUES</td>
+                                    </tr>
+                                    <tr height="17" style="height: 12.75pt;">
+                                        <td class="xl65" height="17" style="border-top: none; height: 12.75pt;">BPEL_FAULT_SENSOR_VALUES</td>
+                                    </tr>
+                                    <tr height="17" style="height: 12.75pt;">
+                                        <td class="xl65" height="17" style="border-top: none; height: 12.75pt;">AUDIT_DETAILS</td>
+                                    </tr>
+                                    <tr height="17" style="height: 12.75pt;">
+                                        <td class="xl65" height="17" style="border-top: none; height: 12.75pt;">DLV_MESSAGE</td>
+                                    </tr>
+                                    <tr height="17" style="height: 12.75pt;">
+                                        <td class="xl65" height="17" style="border-top: none; height: 12.75pt;">DLV_SUBSCRIPTION</td>
+                                    </tr>
+                                    <tr height="17" style="height: 12.75pt;">
+                                        <td class="xl65" height="17" style="border-top: none; height: 12.75pt;">BPEL_FAULTS_VW</td>
+                                    </tr>
+                                    <tr height="17" style="height: 12.75pt;">
+                                        <td class="xl65" height="17" style="border-top: none; height: 12.75pt;">BPEL_VARIABLE_ANALYSIS_REPORT</td>
+                                    </tr>
+                                    <tr height="17" style="height: 12.75pt;">
+                                        <td class="xl65" height="17" style="border-top: none; height: 12.75pt;">JCA_NATIVE_CORRELATION</td>
+                                    </tr>
+                                    <tr height="17" style="height: 12.75pt;">
+                                        <td class="xl65" height="17" style="border-top: none; height: 12.75pt;">VERSION</td>
+                                    </tr>
+                                    <tr height="17" style="height: 12.75pt;">
+                                        <td class="xl65" height="17" style="border-top: none; height: 12.75pt;">REFERENCE_INSTANCE</td>
+                                    </tr>
+                                    <tr height="17" style="height: 12.75pt;">
+                                        <td class="xl65" height="17" style="border-top: none; height: 12.75pt;">FILEADAPTER_IN</td>
+                                    </tr>
+                                    <tr height="17" style="height: 12.75pt;">
+                                        <td class="xl65" height="17" style="border-top: none; height: 12.75pt;">XREF_DATA
+                                            <br />
+                                            <br />
+                                            <br />
+                                            <br />
+                                            <div class="MsoNormal" style="background: white; line-height: 12.95pt; margin-bottom: .0001pt; margin-bottom: 0in;">
+                                                <b>
+                                                    <span style="color: red; font-family: Georgia, serif; font-size: 12pt;">CUBE_INSTANCE</span>
+                                                </b>
+                                                <span style="color: red; font-family: Georgia, serif; font-size: 8.5pt;">
+                                                    <o:p></o:p>
+                                                </span>
+                                            </div>
+                                            <div class="MsoNormal" style="background: white; line-height: 12.95pt; margin-bottom: .0001pt; margin-bottom: 0in;">
+                                                <span style="color: #333333; font-family: Georgia, serif; font-size: 8.5pt;">The first table that you should know is&nbsp;
+                                                </span>
+                                                <b>
+                                                    <span style="font-family: Georgia, serif; font-size: 12pt;">CUBE_INSTANCE</span>
+                                                </b>
+                                                <span style="color: #333333; font-family: Georgia, serif; font-size: 8.5pt;">
+                                                    <o:p></o:p>
+                                                </span>
+                                            </div>
+                                            <div class="MsoNormal">
+                                                <br />
+                                            </div>
+                                            <div class="MsoNormal">
+                                                <span style="background-attachment: initial; background-clip: initial; background-color: white; background-image: initial; background-origin: initial; color: #333333; font-family: Georgia, serif; font-size: 10pt; line-height: 115%;">The most important column that you should know as a BPEL developer is&nbsp;
+                                                </span>
+                                                <span class="apple-style-span">
+                                                    <b>
+                                                        <span style="background-attachment: initial; background-clip: initial; background-color: white; background-image: initial; background-origin: initial; font-family: Georgia, serif;">
+                                                            <span style="white-space: pre-wrap;">cikey</span>
+                                                        </span>
+                                                    </b>
+                                                </span>
+                                                <span class="apple-style-span">
+                                                    <b>
+                                                        <span style="background-attachment: initial; background-clip: initial; background-color: white; background-image: initial; background-origin: initial; color: #3333ff; font-family: Georgia, serif;">
+                                                            <o:p></o:p>
+                                                        </span>
+                                                    </b>
+                                                </span>
+                                            </div>
+                                            <div class="MsoNormal" style="background: white; line-height: 12.95pt; margin-bottom: .0001pt; margin-bottom: 0in;">
+                                                <span class="apple-style-span">
+                                                    <b>
+                                                        <span style="background-attachment: initial; background-clip: initial; background-color: white; background-image: initial; background-origin: initial; font-family: Georgia, serif;">Significance of </span>
+                                                    </b>
+                                                </span>
+                                                <span class="apple-style-span">
+                                                    <b>
+                                                        <span style="background-attachment: initial; background-clip: initial; background-color: white; background-image: initial; background-origin: initial; color: red; font-family: Georgia, serif; font-size: 14pt;">cikey</span>
+                                                    </b>
+                                                </span>
+                                                <span style="color: #333333; font-family: Georgia, serif; font-size: 14pt;">
+                                                    <o:p></o:p>
+                                                </span>
+                                            </div>
+                                            <div class="MsoNormal" style="background: white; line-height: 12.95pt; margin-bottom: .0001pt; margin-bottom: 0in;">
+                                                <span style="color: #333333; font-family: Georgia, serif; font-size: 8.5pt;">This is the instance ID that you see in your BPEL console.This gets incremented
+                                                    in a sequence with creation of BPEL instances.If you don't know what
+                                                    cikey is then here I go. Each BPEL instance is assigned a unique ID.This
+                                                    ID is visible in the BPEL console.&nbsp;And guess what BPEL console does
+                                                    allow you to filter using instance ID.
+                                                    <o:p></o:p>
+                                                </span>
+                                            </div>
+                                            <div class="MsoNormal" style="background-attachment: initial; background-clip: initial; background-color: white; background-image: initial; background-origin: initial; background-position: initial initial; background-repeat: initial initial; margin-bottom: 0in;">
+                                                <div style="line-height: 12.95pt;">
+                                                    <span style="color: #333333; font-family: Georgia, serif; font-size: 8.5pt;">This is one of the key columns that you should know to do a lot of stuff.And
+                                                        this key cuts across a lot of tables in the dehydration tables.
+                                                        <o:p></o:p>
+                                                    </span>
+                                                </div>
+                                                <div style="line-height: 12.95pt;">
+                                                    <span style="color: #333333; font-family: Georgia, serif; font-size: 8.5pt;">
+                                                        <br />
+                                                    </span>
+                                                </div>
+                                                <span style="color: #333333; font-family: Georgia, serif;">
+                                                    <b style="font-size: 8.5pt; line-height: 12.95pt;">
+                                                        <i>
+                                                            <u>Select * from tab;
+                                                            </u>
+                                                        </i>
+                                                    </b>
+                                                    <span style="font-size: 8.5pt; line-height: 12.95pt;">
+                                                        to&nbsp;</span>
+                                                    <span style="font-size: 11px; line-height: 17px;">display</span>
+                                                    <span style="font-size: 8.5pt; line-height: 12.95pt;">&nbsp;the list of tables existed in one schema.</span>
+                                                </span>
+                                            </div>
+                                        </td>
+                                    </tr>
+                                </tbody>
+                            </table>
+                        </div>
+                        <div style='clear: both;'></div>
+                    </div>
+                </div>
+            </div>
+
+        </div>
+    </div>
+</div>

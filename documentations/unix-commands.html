@@ -1,0 +1,300 @@
+---
+layout: post
+title: Basics of Unix / Linux Commands
+link: unix-commands
+category: documentations
+type: documentations
+---
+
+<ul>
+    <li>
+
+        List what inside directory
+        <br/>
+        <code>
+            $ ls <br/>
+            $ ls -a <br/>
+            $ ls -l
+        </code>
+    </li>
+    <li>
+        Make new directory
+        <br/>
+        <code>
+            $ mkdir
+        </code>
+    </li>
+    <li>
+        Change to directory
+        <br/>
+        <code>
+            $ cd [directory]
+        </code>
+        <br/>
+        Current directory (.)
+        <br/>
+        <code>
+            $ cd .
+        </code>
+        <br/>
+        Parent directory (..)
+        <br/>
+        <code>
+            $ cd ..
+        </code>
+    </li>
+    <li>
+        Print working directory
+        <br/>
+        <code>
+            $ pwd
+        </code>
+    </li>
+    <li>
+        Copy file (makes a copy of file1 in the current working directory and calls it file2)<br/>
+        <code>
+            $ cp <i>file1</i> <i>file2</i> <br/>
+            // copy file to current directory: <br/>
+            $ cp /home/hungpham/something.txt . <br/>
+            // copy folder: <br/>
+            $ cp -a /source/. /dest/ <br/>
+            $ cp -R ~/Desktop/MyFolder /Documents
+        </code>
+    </li>
+    <li>
+        Move file or folder <br/>
+        <code>
+            $ mv <i>file1</i> <i>file2</i>
+        </code>
+    </li>
+    <li>
+        Remove files: <br/>
+        <code>
+            $ rm [file]
+        </code>
+        Remove folder: <br/>
+        <code>
+            $ rm -r [folder]
+        </code>
+    </li>
+    <li>
+        Clear terminal screen: <br/>
+        <code>
+            $ clear
+        </code>
+    </li>
+    <li>
+        Display the contents of a file on the screen (concatenate): <br/>
+        <code>
+            $ cat [file.txt]
+        </code>
+    </li>
+    <li>
+        Write the contents of a file onto the screen a page at a time: <br/>
+        <code>
+            $ less [file]
+        </code>
+        <br/>
+        Press the [<b>space-bar</b>] if you want to see another page, and type [<b>q</b>] if you want to quit reading.
+        As you can see, less is used in preference to cat for long files.
+    </li>
+    <br/>
+
+    <li>
+        Write the first ten lines of a file to the screen: <br/>
+        <code>
+            $ head [file] <br/>
+            $ head -10 [file]
+        </code>
+    </li>
+    <li>
+        Write the last ten lines of a file to the screen: <br/>
+        <code>
+            $ tail [file]
+        </code>
+    </li>
+    <li>
+        Search through text with <code>less</code> command: <br/>
+        <code>
+            $ less [file]
+
+        </code>
+        <br/>
+        (still in less) type [/] followed by the word to search: <br/>
+        <code>
+            /[word]
+        </code>
+        <br/>
+        Type [n] to see next occurrence.
+    </li>
+    <br/>
+
+    <li>
+        grep: searches files for specified words or patterns <br/>
+        <code>
+            $ grep [word] [file]
+            <br/>
+            $ grep -i [word] [file]
+        </code>
+        <ul>
+            <li>
+                -v display those lines that do NOT match
+            </li>
+            <li>
+                -n precede each matching line with the line number
+            </li>
+            <li>
+                -c print only the total count of matched lines
+            </li>
+        </ul>
+        <code>
+            grep -ivc [word] [file]
+        </code>
+    </li>
+    <li>
+        Word count: <br/>
+        <code>
+            $ wc -w [file]
+        </code>
+        <br/>
+        Line count: <br/>
+        <code>
+            $ wc -l [file]
+        </code>
+    </li>
+    <li>
+        The <code>></code> symbol: redirect the output of a command <br/>
+        <code>
+            $ cat > [file]
+        </code>
+        <br/>
+        Join file: <br/>
+        <code>
+            $ cat [file1] [file2] > [bigfile]
+        </code>
+    </li>
+    <li>
+        The form >> appends standard output to a file <br/>
+        <code>
+            $ cat >> file
+        </code>
+    </li>
+    <li>
+        <code><</code>: redirect the input of a command
+    </li>
+    <li>
+        Sort alphabetically or numerically sorts a list <br/>
+        <code>
+            $ sort
+            <br/>
+            $ sort < [bigfile]
+            <br/>
+            $ sort < [bigfile] > [sortedfile]
+        </code>
+    </li>
+    <li>
+        See who is on the system <br>
+        <code>
+            $ who <br>
+            $ who > names.txt <br>
+        </code>
+    </li>
+    <li>
+        Pipes: <code>|</code> <br>
+        <code>
+            $ who | sort <br>
+            $ who | wc -l
+        </code>
+        <br>
+        Example: display all lines of [list1] and [list2] containing the letter 'p', and sort the result <br>
+        <code>
+            $ cat list1 list2 | grep p | sort
+        </code>
+    </li>
+    <li>
+        <code>*</code>: wildcard, which match against none or more character(s) in a file (or directory) name <br>
+        Example: list all files in the current directory starting with list.... <br>
+        <code>
+            $ ls list* <br>
+            $ ls *.java
+        </code>
+        <br>
+        <br>
+        The character <code>?</code> will match exactly one character.
+        So ?ouse will match files like house and mouse, but not grouse.
+        <br>
+        <code>
+            $ ls ?list
+        </code>
+    </li>
+    <li>
+        On-line manuals <br>
+        <code>
+            $ man wc <br>
+            $ whatis wc
+        </code>
+    </li>
+    <li>
+        When not sure of the exact name of a command <br>
+        <code>
+            $ apropos [keyword] <br>
+            $ apropos move
+        </code>
+    </li>
+    <li>
+        Change permission of file or directory: <br>
+        <code>
+            $ chmod a+rw file
+        </code>
+        <br>
+        See <a href="/unix-linux/access-rights" style="color: blue"><i><u>How to change access rights of
+        files/directories</u></i></a>
+    </li>
+    <li>
+        <p>
+            Sleep for 5 seconds:
+        </p>
+        <code>
+            $ sleep 5
+        </code>
+    </li>
+    <li>
+        <p>
+            See process (running and done):
+        </p>
+        <code>
+            $ ps
+        </code>
+    </li>
+    <li>
+        <p>
+            Continue suspending process in background:
+        </p>
+        <code>
+            $ bg
+        </code>
+    </li>
+    <li>
+        <p>
+            List all processes:
+        </p>
+        <code>
+            jobs
+        </code>
+    </li>
+    <li>
+        <p>Foreground a process</p>
+        <code>
+            $ fg [jobnumber]
+        </code>
+    </li>
+    <li>
+        <p>Kill job</p>
+        <code>
+            $ kill [jobnumber]
+        </code>
+        <p>Force to kill</p>
+        <code>$ kill -9 [jobnumber]</code>
+    </li>
+
+</ul>

@@ -1,0 +1,54 @@
+---
+layout: post
+title: How to Create Tap Device OpenVPN
+link: generate-certificate
+category: documentations
+type: documentations
+---
+
+<strong>Create config file for OPENVPN tap devices:</strong>
+<ol>
+    <li>Config file for bridge client: <br>
+        <code>dev tap0<br>
+            proto tcp-client<br>
+            tls-client<br>
+            remote 172.16.2.5<br>
+            ca /sec/certificates/rootCA-cert.pem<br>
+            cert /sec/certificates/192.168.1.100-cert.pem<br>
+            key /sec/certificates/192.168.1.100-private-key.pem</code></li>
+    <li>Start script for client:<br>
+    <code>#!/bin/bash<br>
+
+            openvpn --mktun --dev tap0<br>
+            ifconfig tap0 up<br>
+            ifconfig tap0 10.2.4.212 netmask 255.255.255.0<br>
+            openvpn --config /sec/openvpn/tap/bridgeclient.conf</code></li>
+
+    
+    <li>Config file for bridge server:<br>
+        <code>dev tap0<br>
+            proto tcp-server<br>
+            tls-server<br>
+            ca /sec/certificates/rootCA-cert.pem<br>
+            cert /sec/certificates/10.2.4.2-cert.pem<br>
+            key /sec/certificates/10.2.4.2-private-key.pem<br>
+            dh /sec/certificates/dh2048.pem</code></li>
+    <li>(Not succesful yet) Start script for client:<br>
+        <code>
+                #!/bin/bash<br>
+
+                openvpn --mktun --dev tap0<br>
+                ifconfig tap0 up<br>
+                ifconfig tap0 promisc<br>
+                ifconfig eth0 promisc<br>
+                brctl addbr mybridge<br>
+                brctl addif mybridge tap0<br>
+                brctl addif mybridge eth0<br>
+                ifconfig tap0 0.0.0.0<br>
+                ifconfig eth0 0.0.0.0<br>
+                ifconfig mybridge 172.16.2.5 netmask 255.255.255.0 up<br>
+                openvpn --config /sec/openvpn/tap/bridgeserver.conf <br>
+        </code>
+    </li>
+    
+</ol>

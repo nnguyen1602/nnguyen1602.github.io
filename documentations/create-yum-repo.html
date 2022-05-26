@@ -1,0 +1,45 @@
+---
+layout: post
+title: How to create a yum repository in Linux
+link: create-yum-repo
+category: documentations
+type: documentations
+---
+
+<ol>
+    <li>Http file server: (in this case, the server is written in Go) <br>
+    <code>
+        package main<br>
+        <br>
+import (<br>
+	"log"<br>
+	"net/http"<br>
+)<br>
+<br>
+func main() {<br>
+	directory := "/root/repo"<br>
+	http.Handle("/", http.FileServer(http.Dir(directory)))<br>
+	log.Fatal(http.ListenAndServe(":80", nil))<br>
+} <br>
+    </code>
+    Compile and run the program.
+</li>
+    <li>Install the required packages: <br>
+    <code>$ yum install createrepo  yum-utils</code></li>
+    <li>Go to repo folder (in this case: /root/repo):<br>
+    <code>$ cd ~/repo</code></li>
+    <li>Copy the RPM package to this folder and run createrepo command:<br>
+    <code>$ createrepo .</code></li>
+    <li>Refresh the http page to check if the files are there.</li>
+    <li>Create a repo file in cat /etc/yum.repos.d/ <br>
+    Example: hung-playground.repo <br>
+<code>
+    [hung-playground]<br>
+name=Programs written by Hung<br>
+baseurl=http://foreman.ol7/ <b>(your own http file server url)</b><br>
+gpgcheck=0<br>
+enabled=1<br>
+</code></li>
+<li>Check: <br>
+<code>$ yum repolist</code></li>
+</ol>

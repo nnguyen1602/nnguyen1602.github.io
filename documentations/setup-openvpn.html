@@ -1,0 +1,57 @@
+---
+layout: post
+title: How to Setup Private VPN
+link: setup-openvpn
+category: documentations
+type: documentations
+---
+
+<strong>For RHEL</strong>
+<br>
+<strong>Server:</strong>
+<ol>
+    <li>Install openvpn: <br>
+    <code>$ yum install openvpn</code></li>
+    <li>Get server template file: <br>
+    <code>$ cd /usr/share/doc/openvpn-*/sample/sample-config-files/ <br>
+    $ cp server.conf /etc/openvpn</code></li>
+    <li>Generate keys and certificate and DH file with this: <a href="{{site.documentations}}/generate-certificate" style="color:blue">How to Generate Own Certificates</a></li>
+    <li>Change server.conf file: <br>
+    <code>push "redirect-gateway def1 bypass-dhcp"<br>
+        push "dhcp-option DNS 8.8.8.8"<br>
+        push "dhcp-option DNS 8.8.4.4"<br>
+        user nobody<br>
+        group nobody<br>
+        tls-auth ta.key 0
+    </code></li>
+    <li>Make sure these 3 files are in /etc/openvpn/ : ca.crt  server.crt  server.key</li>
+    <li>In /etc/openvpn/, generate ta key file: <br>
+    <code>$ openvpn --genkey --secret ta.key</code></li>
+    <li>Enable and start server: <br>
+    <code>$ systemctl start openvpn@server <br>
+    $ systemctl enable openvpn@server</code></li>
+</ol>
+
+<strong>Client:</strong>
+<ol>
+    <li>Install openvpn: <br>
+        <code>$ yum install openvpn</code></li>
+        <li>Generate keys and certificate and DH file with this: <a href="{{site.documentations}}/generate-certificate" style="color:blue">How to Generate Own Certificates</a></li>
+    <li>Copy the ta key file from server to client</li>
+    <li>Create client.ovpn file:<br>
+    <code>client<br>
+        dev tun<br>
+        proto udp<br>
+        remote ip-address-of-server openvpn-port<br>
+        resolv-retry infinite<br>
+        nobind<br>
+        persist-key<br>
+        persist-tun<br>
+        verb 3<br>
+        ca ca.crt<br>
+        cert client2.crt<br>
+        key client2.key<br>
+        tls-auth ta.key 1</code></li>
+    <li>Run:<br>
+    <code>openvpn --config client.ovpn</code></li>
+</ol>

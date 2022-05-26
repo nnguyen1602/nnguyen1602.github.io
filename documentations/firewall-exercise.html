@@ -1,0 +1,84 @@
+---
+layout: post
+title: Practicing Packet Filter (Firewall)
+link: firewall-exercise
+category: documentations
+type: documentations
+---
+
+<p>
+    <strong>Configure the network system like this post: </strong>
+    <a href="{{site.documentations}}/virtual-network-systems" style="color:blue">How to Create A LAB Virtual Network System
+        with Docker</a>
+</p>
+
+<ol>
+    <li>
+        <p>Check packet filter rule:</p>
+        <code>$ iptables -v -L</code>
+    </li>
+    <li>
+        <p>Drop all forward ICMP packet in router 2:</p>
+        <code>$ iptables -A FORWARD -p ICMP -j DROP</code>
+    </li>
+    <li>
+        <p>Flush all the rule in FORWARD:</p>
+        <code>$ iptables -F FORWARD</code>
+    </li>
+    <li>
+        <p><strong>Stateless:</strong></p>
+        <p>Only allow outgoing TCP connection:</p>
+        <code>$ iptables -A FORWARD -d 10.2.4.0/24 -p TCP --tcp-flags SYN,ACK SYN -j DROP</code>
+        <p>Or with error message:</p>
+        <code>$ iptables -A FORWARD -d 10.2.4.0/24 -p TCP --tcp-flags SYN,ACK SYN -j REJECT</code>
+    </li>
+    <li>
+        <p>Stateful with conntrack</p>
+        <p>Change policy of FORWARD table to DROP:</p>
+        <code>iptables -P FORWARD DROP</code>
+    </li>
+    <li>
+        <p>Only allow outgoing new TCP connection:</p>
+        <code>$ iptables -A FORWARD -s 10.2.4.0/24 -m conntrack --ctstate NEW -j ACCEPT
+        <br>
+        $ iptables -A FORWARD -m conntrack --ctstate ESTABLISHED -j ACCEPT
+    </code>
+    </li>
+    <li><strong>NAT</strong>
+        <p>Delete the route to 192.168.1.0/24 network on router 2:</p>
+        <code>$ route del -net 192.168.1.0/24 gw 172.16.2.4 <br></code>
+        <p>Create source NAT at router 1:</p>
+        <code>$ iptables -t nat -A POSTROUTING -o eth0 -j SNAT --to 172.16.2.4
+    </code>
+        <p>Create destination NAT at router 1:</p>
+        <code>$ iptables -t nat -A PREROUTING -p TCP --dport 8080 -i eth0 -j DNAT --to 192.168.1.100:8180</code>
+    </li>
+</ol>
+
+<h3>Application Level Gateway recap:</h3>
+<div>
+    <p>Advantages:</p>
+    <ul>
+        <li>user specific rule</li>
+        <li>Fine-gained control (communication peers, functions)</li>
+        <li>Content checking (detect malware, suspicious content)</li>
+        <li>No direct connection between sender/receiver</li>
+        <li>Logging</li>
+    </ul>
+    <p>Disadvantages:</p>
+    <ul>
+        <li>Applciation specific</li>
+        <li>expose to attacks</li>
+    </ul>
+</div>
+
+<h3>Weakness in the concept of Firewall:</h3>
+<div>
+    <ul>
+        <li>Mobile devices</li>
+        <li>Tunnels and encryption</li>
+    </ul>
+</div>
+
+<code>$ iptables -A INPUT -p tcp --dport 7001 -j ACCEPT <br>
+$ iptables -A OUTPUT -p tcp --sport 22 -j ACCEPT</code>

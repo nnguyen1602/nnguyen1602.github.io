@@ -1,0 +1,195 @@
+---
+layout: post
+title: Review knowledge for IT Security course
+link: it-sec-review
+category: documentations
+type: documentations
+---
+
+<h2>I. Introduction</h2>
+<h3>1. Define the term "IT-Security"</h3>
+<p>
+    Protection of information and information systems against unauthorized access and modification and availability of
+    information system services for legitimate users, including measures to thwart, discover or log threats. Protection
+    against unauthorized access must be ensured during storage, processing or in transit.
+</p>
+
+<h3>2. What are the aims of “IT-Security”? Describe each aim briefly and present an example.</h3>
+<p>
+    <ul>
+        <li>Confidentiality: Protection against unauthorized access</li>
+        <li>Integrity: Protection against unauthorized modification</li>
+        <li>Availability: Resources and Services are available for legitimate users</li>
+        <li>Authenticity and authentication: Unambiguous idenfification of the sender of information or a communication
+            peer</li>
+        <li>Nonrepudiation: Ability to prove that a given message was sent and by whom to a third party not involved in
+            communication</li>
+        <li>Authorization: Accces to resources is limited to certain group of (authenticated) users</li>
+    </ul>
+</p>
+
+<h3>3. What are passive and active attacks and why is the distinction between them helpful in practice?</h3>
+<p>
+    Passive Attacks
+    <ul>
+        <li>Attacker does not actively participate</li>
+        <li>Example: Snooping and wiretapping</li>
+        <li>Difficult to discover</li>
+        <li>Preventive means of protection against active attacks</li>
+    </ul>
+    Active attacks
+    <ul>
+        <li>Attacker actively manipulates systems or data</li>
+        <li>Manipulation of data or systems</li>
+        <li>Attacker often leaves traces</li>
+        <li>Prevention and Detection possible</li>
+    </ul>
+</p>
+
+<h2>II. Cryptographical Principles and Methods</h2>
+<p>
+    Cryptographic model: <br>
+    <img src="/resource/img/crypto-model.png" width="600" />
+    <br>
+    Classical Encryption Methods:
+    <ul>
+        <li>Substitution</li>
+        <li>Transposition</li>
+        <li>Product cipher</li>
+        <li>Applying multiple substitution and/or transposition</li>
+    </ul>
+</p>
+
+<h3>1. Symmetrical Encryption Schemes</h3>
+<p>
+    <img src="/resource/img/semetricscheme.png" width="600" />
+</p>
+
+<h3>2. Public-Key Methods</h3>
+<p>
+    <img src="/resource/img/publicmethod.png" width="600" />
+</p>
+
+<h3>3. Hybrid Methods</h3>
+<p>
+    <img src="/resource/img/hybrid.png" width="600" />
+</p>
+
+<h3>4. Modes of Operation</h3>
+<p>
+    Electronic Code Book <br>
+    Cipher Block Chaining <br>
+    Cipher Feedback Mode <br>
+    Output Feedback Mode <br>
+    Counter Mode
+</p>
+
+<h2>III. Authentication</h2>
+<p>
+    Authentication and authenticity: Unambiguous identification of the sender of information or a communication peer
+</p>
+
+<h3>1. Factors for Authentication</h3>
+<p>
+    <ul>
+        <li>What you know: password</li>
+        <li>What you have: token</li>
+        <li>What you are: biometric</li>
+    </ul>
+</p>
+
+<h3>2. Methods</h3>
+<p>
+    Size of Passowrd domain: <br>
+    <img src="/resource/img/pass-size.png" width="600" />
+    <br>
+    <br>
+    Authentication by Symmetric Key <br>
+    <img src="/resource/img/authsym.png" width="600" />
+    <br>
+    <br>
+    Authentication by Public Key Cryptography <br>
+    <img src="/resource/img/authpub.png" width="600" />
+    <br>
+</p>
+
+<h3>3. Digital Signatures</h3>
+<p>
+    Root Certificate <br>
+    Certificate for products (servers...)<br>
+    Certificate Request (come along with csr file)<br>
+    Public-private key pair <br>
+    <br>
+
+    The CA have its own signed certificate, and private key.<br>
+    An organization create public-private key pair, and certificate signed request.<br>
+    The CA must sign the CSR with its private key and send back to organization.<br>
+
+    <br>
+    From the internet: <br>
+    You usually start by generating a private key / public key pair, followed by a CSR (Certificate Signing Request).
+    The CSR would contain a copy of the public key and some basic information about the subject. Once you've generated
+    a CSR, you would then submit that CSR to a CA.
+
+    Once the CA is done signing the cert, the CA would then return the cert to you and you would then import that
+    signed certificate to your server.
+
+    If we recall our discussion on digital certificates, the signed cert would contain some basic information regarding
+    the subject (your site), the issuer, the validity period, the public key (of your site), and a digital signature of
+    the cert signed using the CA's private key.
+    <br>
+    In summary,
+    You generate a private key / public key pair and submit a CSR to a Certificate Authority. The contents of the CSR
+    will form part of the final server certificate.
+    The CA verifies whether the information on the certificate is correct and then signs it using its (the CA's)
+    private key. It then returns the signed server certificate to you.
+    You import the signed server certificate unto your server.
+</p>
+
+<h2>IV. Operating System Security</h2>
+<p>
+    <img src="/resource/img/ossec.png" width="600" />
+</p>
+<p>
+    Vulnerabilities in Services<br>
+    <img src="/resource/img/vulnebi.png" width="600" />
+</p>
+
+<h2>V. Introduction to Network Security</h2>
+<p>
+    <strong>Threats</strong>
+    <img src="/resource/img/intethreat.png" width="600" />
+</p>
+<div>
+    <ul>
+        <li>Sniffing</li>
+        <li>Manipulation of a message</li>
+        <li>ARP-Spoofing: <br> <img src="/resource/img/arp-spoofing.png" width="600" /></li>
+        <li>IP-Spoofing: <br> <img src="/resource//img/ip-spoofing.png" width="600" /> </li>
+        <li>TCP sequence attack: <br> <img src="/resource/img/tcp-sequence-attack.png" width="600" /></li>
+        <li>DNS-Spoofing: <br> <img src="/resource/img/dns-spoofing.png" width="600" /></li>
+    </ul>
+</div>
+<div>
+    <strong>Security:</strong>
+    <ul>
+        <li>Application Layer Security</li>
+        <li>Security on Transport Layer</li>
+        <li>Network Layer Security</li>
+        <li>Data Link Layer Security</li>
+    </ul>
+</div>
+
+<h2>VI. Firewall</h2>
+<p>
+    <img src="/resource/img/firewall-solution.png" width="600" />
+</p>
+<div>
+    <p>Problems and Limits of Packet filter:</p>
+    <ul>
+        <li>No user or application-specific filtering possible</li>
+        <li>Use of Transport-layer information to identify application protocols</li>
+        <li>Application with varying port number</li>
+        <li>Tunneling and encryption </li>
+    </ul>
+</div>

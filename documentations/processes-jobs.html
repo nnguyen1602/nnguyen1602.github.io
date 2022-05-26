@@ -1,0 +1,92 @@
+---
+layout: post
+title: Processes and Jobs
+link: processes-jobs
+category: documentations
+type: documentations
+---
+
+<h3>
+    Process
+</h3>
+<div class="child">
+    <p>
+        A process is an executing program identified by a unique PID (process identifier). To see information about your
+        processes, with their associated PID and status, type
+    </p>
+    <code>
+        $ ps
+    </code>
+    <p>
+        A process may be in the foreground, in the background, or be suspended. In general the shell does not return the
+        UNIX prompt until the current process has finished executing.
+        <br>
+        Some processes take a long time to run and hold up the terminal. Backgrounding a long process has the effect
+        that
+        the UNIX prompt is returned immediately, and other tasks can be carried out while the original process continues
+        executing.
+    </p>
+</div>
+
+<p>
+    <strong>
+        Running process in background: add <code>&</code> to the end of the command line
+    </strong>
+</p>
+<div class="child">
+    <code>
+        $ [command] &
+    </code>
+    <p>
+        For example: <code>$ sleep 10 &</code>
+    </p>
+    <br>
+    <p>
+        You can suspend the process running in the foreground by typing ^Z, i.e.hold down the [Ctrl] key and type [z]. Then to put it in the background, type
+    </p>
+    <code>
+        $ bg
+    </code>
+</div>
+
+<h3>
+    Listing suspended and background processes
+</h3>
+
+<div class="child">
+    <p>
+        When a process is running, backgrounded or suspended, it will be entered onto a list along with a job number. To examine this list, type
+    </p>
+    <code>$ jobs</code>
+    <p>
+        To restart (foreground) a suspended processes, type
+    </p>
+    <code>
+        $ fg [jobnumber]
+    </code>
+    <p>
+        <code>fg</code>: foregrounds the last suspended process
+    </p>
+</div>
+<h3>
+    Kill a process
+</h3>
+
+<div class="child">
+    <p>
+        To kill a suspended or background process, type
+    </p>
+    <code>
+        $ kill [jobnumber]
+    </code>
+    <p>
+        Force to kill:
+    </p>
+    <code>
+        $ kill -9 [jobnumber]
+    </code>
+</div>
+
+<br>
+<br>
+<a href="http://www.ee.surrey.ac.uk/Teaching/Unix/index.html" style="color: blue">Reference!</a>

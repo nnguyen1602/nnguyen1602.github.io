@@ -1,0 +1,57 @@
+---
+layout: post
+title: How to Create A LAB Virtual Network System with Docker
+link: virtual-network-systems
+category: documentations
+type: documentations
+---
+
+The system will look like the following diagram:
+<img src="/resource/img/ITSEC_virtual_network.png" width="600">
+<br>
+<strong>Note: the ip addresses of the VMs are different from the above diagram (also even if you don't use docker but
+    normal VMs tool like VirtualBox...), but the method stays the same.</strong>
+<ol>
+    <li><code>$ docker network create --driver=bridge --subnet=172.16.2.0/24 --ip-range=172.16.2.0/24 br0</code></li>
+    <li><code>$ docker network create --driver=bridge --subnet=192.168.1.0/24 --ip-range=192.168.1.0/24 br1</code></li>
+    <li><code>$ docker network create --driver=bridge --subnet=10.2.4.0/24 --ip-range=10.2.4.0/24 br1</code></li>
+    <li><code>$ docker run --cap-add=NET_ADMIN -ti --privileged -P --name=router1 --net br0 --ip 172.16.2.4 pthung/itsec-lab /bin/bash
+        <br>
+        $ export PS1="router1@172.16.2.4||192.168.1.5: \w \$ "
+    </code></li>
+    <li><code>$ docker run --cap-add=NET_ADMIN -ti --privileged -P --name=router2 --net br0 --ip 172.16.2.5 pthung/itsec-lab /bin/bash<br>
+        $ export PS1="router2@172.16.2.5||10.2.4.2: \w \$ "
+    </code></li>
+    <li>Run 2 end machines: <br>
+        <code>
+            $ docker run -ti --cap-add=NET_ADMIN --privileged --name=vm1 --net br1 --ip 192.168.1.100 pthung/itsec-lab /bin/bash <br>
+            $ export PS1="machine1@192.168.1.100: \w \$ "
+        <br>
+            $ docker run -ti --cap-add=NET_ADMIN --privileged --name=vm2 --net br2 --ip 10.2.4.37 pthung/itsec-lab /bin/bash<br>
+            $ export PS1="machine2@10.2.4.37: \w \$ "
+        </code>
+    </li>
+    <li>Add interfaces to routers:<br>
+        <code>
+            $ docker network connect br1 router1 --ip 192.168.1.5 <br>
+            $ docker network connect br2 router2 --ip 10.2.4.2
+        </code>
+    </li>
+    <li>Setup iptabble for both routers: <br>
+        <code>
+            $ iptables -t nat -A POSTROUTING --out-interface eth1 -j MASQUERADE <br>
+            $ iptables -A FORWARD --in-interface eth0 -j ACCEPT<br>
+            $ iptables -t nat -A POSTROUTING --out-interface eth0 -j MASQUERADE<br>
+            $ iptables -A FORWARD --in-interface eth1 -j ACCEPT
+        </code>
+    </li>
+    <li>For router1: <code>$ route add -net 10.2.4.0 netmask 255.255.255.0 gateway 172.16.2.5   (ip address of router 2)</code></li>
+    <li>For router2: <code>route add -net 192.168.1.0 netmask 255.255.255.0 gateway 172.16.2.4   (ip address of router 1)</code></li>
+    <li>For vm1: <code>$ route add default gateway 192.168.1.5</code></li>
+    <li>For vm2: <code>$ route add default gateway 10.2.4.2</code></li>
+</ol>
+
+<p>Examples for firewall:</p>
+<code>$ iptables -A INPUT -s 192.168.1.0/24 -d 192.168.1.0/24 --protocol tcp --tcp-flags ALL SYN,ACK -j DROP</code>
+<br>
+<code>$ iptables -A FORWARD -m conntrack --ctstate NEW -j DROP</code> (for routers)

@@ -1,0 +1,39 @@
+---
+layout: post
+title: How to install vnc-server for Oracle Linux 7
+link: vnc-server
+category: documentations
+type: documentations
+---
+<ol>
+    <li>Install the tigervnc-server package:<br>
+    <code>$ yum install tigervnc-server</code></li>
+    <li>Create the VNC environment for the VNC users (not root user):<br>
+    <code>$ su - vncuser<br>
+    $ vncpasswd</code></li>
+    <li>Copy the vncserver@.service template file, and change "display" to a number (start from 1):<br>
+    <code>$ cp /lib/systemd/system/vncserver@.service /etc/systemd/system/vncserver-vncuser@\:display.service</code></li>
+    <li>Change content of the file: change "vncuser" to yours:<br>
+    <code>ExecStart=/sbin/runuser -l <b>vncuser</b> -c "/usr/bin/vncserver %i -localhost -geometry 1600x900"<br>
+        PIDFile=/home/<b>vncuser</b>/.vnc/%H%i.pid</code></li>
+    <li>Reload "systemd" and start:<br>
+    <code>$ systemctl daemon-reload<br>
+    $ systemctl start vncserver-vncuser@\:display.service</code></li>
+    <li>Enable firewall:<br>
+    <code>
+        $ firewall-cmd --zone=zone --add-service=vnc-server --permanent
+    </code></li>
+    <li>Install and enable a desktop environment:<br>
+    <code>$ yum groupinstall "server with gui"<br>
+    INSTALL ANY DESKTOP ENVIRONMENT THAT YOU LIKE</code></li>
+    <li>For example, if you have KDE, then edit in "$HOME/.vnc/xstartup":<br>
+        <code>#!/bin/sh<br>
+            unset SESSION_MANAGER<br>
+            unset DBUS_SESSION_BUS_ADDRESS<br>
+            #exec /etc/X11/xinit/xinitrc<br>
+            startkde &</code>
+    </li>
+    <li>Open SSH tunnel:<br>
+    <code>$ ssh -L 5901:localhost:5901 -N -f -l vncuser IP_of_the_server</code></li>
+    <li>Connect by using a VNC client with "localhost:5901"</li>
+</ol>

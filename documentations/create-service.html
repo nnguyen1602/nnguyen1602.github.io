@@ -1,0 +1,36 @@
+---
+layout: post
+title: How to create a service in Linux
+link: create-service
+category: documentations
+type: documentations
+---
+
+<p>This can be used with <a href="{{site.documentations}}/create-rpm-package" style="color:blue">How to create a RPM package in Linux</a></p>
+
+<ol>
+    <li>Create a service file for execuatble file: <br>
+        Example: <b>luchecker.service</b> <br>
+        <code>
+            [Unit]<br>
+Description=linux updates checking service<br>
+After=network.target<br>
+StartLimitBurst=5<br>
+StartLimitIntervalSec=10<br>
+<br>
+[Service]<br>
+Type=simple<br>
+Restart=always<br>
+RestartSec=1<br>
+User=root<br>
+ExecStart=/usr/bin/linux-updates-checker<br>
+<br>
+[Install]<br>
+WantedBy=multi-user.target
+        </code>
+    </li>
+    <li>Put it to <code>/lib/systemd/system</code></li>
+    <li>Run and enable the service (when the service is enabled, it will start with the system): <br>
+    <code>$ systemctl start luchecker.service <br>
+    $ systemctl enable luchecker.service</code></li>
+</ol>

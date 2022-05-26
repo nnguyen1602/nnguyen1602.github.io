@@ -1,0 +1,9 @@
+exclude: ['README.md']
+permalink: pretty
+title: InfrasLab - A Network Infrastructure Lab
+windows-loc: /windows
+macos-loc: /macos
+linux-loc: /linux
+others-loc: /others
+unix-linux-loc: /unix-linux
+documentations: /documentations

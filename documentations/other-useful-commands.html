@@ -1,0 +1,31 @@
+---
+layout: post
+title: Other useful UNIX commands
+link: other-useful-commands
+category: documentations
+type: documentations
+---
+
+<p>
+    Check quota:
+</p>
+<code>
+    $ quota -v
+</code>
+<p>
+    Report the space left on the file system:
+</p>
+<code>
+    $ df -T -h
+</code>
+<p>To display the largest folders/files including the sub-directories, run:</p>
+<code>du -hs * | sort -rh | head -5 <br>
+    du -Sh | sort -rh | head -5</code>
+
+<p>Mount NFS:</p>
+<code>mount -t nfs -o proto=tcp,port=2049 10.37.129.2:/ /mnt/sites</code>
+
+<p>Docker run nginx (only remind for me):</p>
+<code>docker run -d -p 80:80 -p 443:443 --name=nginx -v /mnt/sites:/usr/share/nginx/html nginx:v2</code>
+
+<p>Find files: <code>$ find . -name testfile.txt</code></p>

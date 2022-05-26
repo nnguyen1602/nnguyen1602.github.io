@@ -1,0 +1,210 @@
+---
+layout: post
+title: Access Rights of Files/Directories
+link: access-rights
+category: documentations
+type: documentations
+---
+
+<img src="/resource/img/downloadList.png" style="width:75%;height:75%;">
+<h4>
+    From the left side:
+</h4>
+<p>
+    The first character shows if it is a file or directory.
+</p>
+<p class="child">
+    File: <code>-</code> <br>
+    Directory: <code>d</code>
+</p>
+<p>
+    Next 9 characters are the access rights (or permissions), and are taken as three groups of 3.
+</p>
+<ul>
+    <li>
+        The left group of 3 gives the file permissions for the user that owns the file (or directory).
+    </li>
+    <li>
+        The middle group gives the permissions for the group of people to whom the file (or directory) belongs.
+    </li>
+    <li>
+        The rightmost group gives the permissions for all others.
+    </li>
+</ul>
+<strong>
+    <u>
+        Access rights on files:
+    </u>
+</strong>
+<ul>
+    <li>
+        <code>r (or -) </code> indicates read permission (or otherwise), that is, the presence or absence of permission
+        to read and copy the file
+    </li>
+    <li>
+        <code>w (or -) </code> indicates write permission (or otherwise), that is, the permission (or otherwise) to
+        change a file
+    </li>
+    <li>
+        <code>x (or -) </code> indicates execution permission (or otherwise), that is, the permission to execute a file,
+        where appropriate
+    </li>
+</ul>
+<strong>
+    <u>
+        Access rights on directories:
+    </u>
+</strong>
+<ul>
+    <li>
+        <code>r</code> allows users to list files in the directory
+    </li>
+    <li>
+        <code>w</code> means that users may delete files from the directory or move files into it
+    </li>
+    <li>
+        <code>x</code> means the right to access files in the directory. This implies that you may read files in the
+        directory provided you have read permission on the individual files.
+    </li>
+</ul>
+<p>
+    Examples: <code>-rwxrwxrwx</code>: a file that everyone can read, write and execute (and delete)
+</p>
+<p>
+    On MacOS the symbol <code>@</code> indicates that the file has <a
+        href="https://en.wikipedia.org/wiki/Extended_file_attributes#OS_X" style="color: blue"><i><u>extended
+    attributes</u></i></a>.
+</p>
+
+<p>
+    The number after shows the number of files inside a directory. The <code>.</code> and <code>..</code> are also
+    counted. <br>If it is a file, the number is <code>1</code>.
+</p>
+<p>
+    Next is the owner of the file or directory (in this case: <i>hungpham</i>).
+</p>
+<p>
+    The word <i>staff</i> is the group, this can be either <i>staff</i> or <i>sysadm</i> group.
+</p>
+<p>
+    Next is the size of file or directory.
+</p>
+<p>
+    Finally, the day of creation is shown.
+</p>
+
+<br>
+
+<h3>
+    How to change access rights
+</h3>
+
+<p>
+    Command:
+</p>
+<code>
+    $ chmod [option] [whom][+,-,=][permission] [filename]
+</code>
+<br>
+<br>
+<table style="width: 60%; border: 1px solid lightgray; text-align: center">
+    <tr style="margin-left: 0px">
+        <th>
+            Symbol
+        </th>
+        <th>
+            Meaning
+        </th>
+    </tr>
+    <tr>
+        <td>
+            u
+        </td>
+        <td>
+            user
+        </td>
+    </tr>
+    <tr>
+        <td>
+            g
+        </td>
+        <td>
+            group
+        </td>
+    </tr>
+    <tr>
+        <td>
+            o
+        </td>
+        <td>
+            other
+        </td>
+    </tr>
+    <tr>
+        <td>
+            a
+        </td>
+        <td>
+            all
+        </td>
+    </tr>
+    <tr>
+        <td>
+            r
+        </td>
+        <td>
+            read permission
+        </td>
+    </tr>
+    <tr>
+        <td>
+            w
+        </td>
+        <td>
+            write (delete) permission
+        </td>
+    </tr>
+    <tr>
+        <td>
+            x
+        </td>
+        <td>
+            execution (or access directory) permission
+        </td>
+    </tr>
+    <tr>
+        <td>
+            +
+        </td>
+        <td>
+            add permission
+        </td>
+    </tr>
+    <tr>
+        <td>
+            -
+        </td>
+        <td>
+            remove permission
+        </td>
+    </tr>
+    <tr>
+        <td>
+            =
+        </td>
+        <td>
+            set exactly equal
+        </td>
+    </tr>
+</table>
+<p>
+    <br>
+    Example: give read and write permissions on the file to all
+</p>
+<code>
+    $ chmod a+rw file
+</code>
+
+<br>
+<br>
+<a href="http://www.ee.surrey.ac.uk/Teaching/Unix/index.html" style="color: blue">Reference!</a>

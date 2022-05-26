@@ -1,0 +1,22 @@
+---
+layout: post
+title: How to run FTP server in Linux
+link: install-ftp-server
+category: documentations
+type: documentations
+---
+
+<p><strong>Note: this tutorial is only for CentOS 7 / RHEL 7</strong></p>
+<ol>
+    <li>Install vsftpd (server) and ftp (client): <br>
+    <code>$ yum install vsftpd ftp -y</code></li>
+    <li>Change in the config file: "/etc/vsftpd/vsftpd.conf" <br>
+        <code>
+            anonymous_enable=NO <br>
+            local_enable=YES<br>
+            chroot_local_user=YES
+        </code>
+    </li>
+    <li>Restart the service:<br>
+    <code>$ systemctl restart vsftpd</code></li>
+</ol>
