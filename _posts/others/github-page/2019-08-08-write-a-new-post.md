@@ -1,7 +1,7 @@
 ---
 title: Writing a New Post
 author: cotes
-date: 2019-08-08 14:10:00 +0800
+date: 2019-08-08 14:10:00 +0200
 categories: [Others, GitHub Page]
 tags: [other, github, page]
 render_with_liquid: false
@@ -33,7 +33,7 @@ tags: [TAG]     # TAG names should always be lowercase
 
 ### Timezone of Date
 
-In order to accurately record the release date of a post, you should not only set up the `timezone` of `_config.yml`{: .filepath} but also provide the post's timezone in variable `date` of its Front Matter block. Format: `+/-TTTT`, e.g. `+0800`.
+In order to accurately record the release date of a post, you should not only set up the `timezone` of `_config.yml`{: .filepath} but also provide the post's timezone in variable `date` of its Front Matter block. Format: `+/-TTTT`, e.g. `+0200`.
 
 ### Categories and Tags
 

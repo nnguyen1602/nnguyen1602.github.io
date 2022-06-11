@@ -1,7 +1,7 @@
 ---
 title: Text and Typography
 author: hung
-date: 2019-08-08 11:33:00 +0800
+date: 2019-08-08 11:33:00 +0200
 categories: [Others, GitHub Page]
 tags: [other, github, page]
 math: true
