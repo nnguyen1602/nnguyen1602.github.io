@@ -35,7 +35,7 @@ Next 9 characters are the access rights (or permissions), and are taken as three
 
 Examples: `-rwxrwxrwx`: a file that everyone can read, write and execute (and delete)
 
-On MacOS the symbol `@` indicates that the file has [_<u>extended attributes</u>_](https://en.wikipedia.org/wiki/Extended_file_attributes#OS_X).
+On MacOS the symbol `@` indicates that the file has [extended attributes](https://en.wikipedia.org/wiki/Extended_file_attributes#OS_X).
 
 The number after shows the number of files inside a directory. The `.` and `..` are also counted.  
 If it is a file, the number is `1`.

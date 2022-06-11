@@ -96,7 +96,7 @@ tags: [macos, linux]
     $ apropos move`
 *   Change permission of file or directory:  
     `$ chmod a+rw file`  
-    See [_<u>How to change access rights of files/directories</u>_](/unix-linux/access-rights)
+    See [How to change access rights of files/directories](/posts/access-rights-of-files-directories)
 *   Sleep for 5 seconds:
 
     `$ sleep 5`
