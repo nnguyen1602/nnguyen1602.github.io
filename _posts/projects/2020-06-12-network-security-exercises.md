@@ -2,7 +2,7 @@
 title: Network Security Exercises
 date: 2020-06-12 00:15 +0200
 author: hung
-categories: [Project, Hobby]
+categories: [Projects, Hobby]
 tags: [project, hobby, docker, lab network]
 ---
 
