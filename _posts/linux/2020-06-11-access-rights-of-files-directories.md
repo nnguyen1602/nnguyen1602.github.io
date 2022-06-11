@@ -1,12 +1,12 @@
 ---
-layout: post
+author: hung
 title: Access Rights of Files/Directories
-date: 2019-06-11 22:43 +0200
+date: 2020-06-11 22:43 +0200
 categories: [Linux, Basics]
 tags: [linux]
 ---
 
-![](/assets/images/downloadList.png)
+![](/assets/images/20190808/downloadList.png)
 
 **From the left side:**
 
