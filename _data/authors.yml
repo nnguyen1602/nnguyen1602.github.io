@@ -1,0 +1,23 @@
+## Template › https://github.com/jekyll/jekyll-seo-tag/blob/master/docs/advanced-usage.md#setting-author-url
+# -------------------------------------
+# {author_id}:
+#   name: {full name}
+#   twitter: {twitter_of_author}
+#   url: {homepage_of_author}
+# -------------------------------------
+
+hung:
+  name: Hung Pham
+  url: https://www.linkedin.com/in/hung-pham-162a40159/
+
+dat:
+  name: Dat Huynh
+  url: https://www.linkedin.com/in/hung-pham-162a40159/
+
+khoi:
+  name: Khoi Vo
+  url: https://www.linkedin.com/in/hung-pham-162a40159/
+
+hieu:
+  name: Hieu Nguyen
+  url: https://www.linkedin.com/in/hung-pham-162a40159/
